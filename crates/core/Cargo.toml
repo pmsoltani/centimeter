@@ -1,0 +1,22 @@
+[package]
+name = "centimeter-core"
+description = "The double-entry accounting engine: minimal yet powerful."
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+
+[dependencies]
+rust_decimal.workspace = true
+thiserror.workspace = true
+uuid.workspace = true
+
+[dev-dependencies]
+proptest.workspace = true
+# Tests mint v7 UUIDs; the library never does. Declaring the feature here keeps
+# it out of `cargo build`, so the wasm target stays free of an entropy source.
+uuid = { workspace = true, features = ["v7"] }
+
+[lints]
+workspace = true
