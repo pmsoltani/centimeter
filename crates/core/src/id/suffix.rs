@@ -1,5 +1,7 @@
 //! Crockford's Base32 encoding and decoding for record IDs.
 
+use super::IdError;
+
 const ALPHABET: [u8; 32] = *b"0123456789abcdefghjkmnpqrstvwxyz";
 
 const INVALID: u8 = 0xFF;
@@ -29,55 +31,30 @@ pub(super) fn encode_base32(value: u128) -> [u8; 26] {
 /// # Errors
 /// Returns an error if the provided string is not a valid 26-character
 /// Crockford's Base32 string or if the first character is not in '0..=7'.
-pub(super) fn decode_base32(s: &str) -> Result<u128, SuffixError> {
+pub(super) fn decode_base32(s: &str) -> Result<u128, IdError> {
     let encoded = s.as_bytes();
     if encoded.len() != 26 {
         // NOTE: Do not use `s.len()` or `s.chars().count()` here, as it may be
         // different from `bytes.len()` if the string contains non-ASCII chars.
-        return Err(SuffixError::Length { got: encoded.len() });
+        return Err(IdError::SuffixBadLength { got: s.into(), len: encoded.len() });
     }
     let first = LOOKUP[encoded[0] as usize];
     match first {
-        INVALID => return Err(SuffixError::Character { got: encoded[0] }),
-        8..=31 => return Err(SuffixError::FirstCharacter { got: encoded[0] }),
+        INVALID => return Err(IdError::SuffixBadChar { got: s.into(), index: 0 }),
+        8..=31 => return Err(IdError::SuffixOverflow { got: encoded[0] }),
         _ => {}
     }
 
     let mut result = u128::from(first);
-    for &byte in &encoded[1..] {
+    for (index, &byte) in encoded[1..].iter().enumerate() {
         let value = LOOKUP[byte as usize];
+        let index = index + 1; // First character already processed.
         if value == INVALID {
-            return Err(SuffixError::Character { got: byte });
+            return Err(IdError::SuffixBadChar { got: s.into(), index });
         }
         result = (result << 5) | u128::from(value);
     }
     Ok(result)
-}
-
-/// Errors related to the record id suffix.
-#[derive(Debug, thiserror::Error)]
-#[non_exhaustive]
-pub enum SuffixError {
-    /// The record id suffix is not 26 characters long.
-    #[error("record id suffix is not 26 characters long, got {got}")]
-    Length {
-        /// The provided ID's suffix length.
-        got: usize,
-    },
-
-    /// The record id suffix contains an invalid character.
-    #[error("record id suffix contains an invalid character, got {got}")]
-    Character {
-        /// The provided ID's suffix.
-        got: u8,
-    },
-
-    /// The record id suffix has an invalid first character.
-    #[error("record id suffix's first character must be between 0 and 7, got {got}")]
-    FirstCharacter {
-        /// The provided ID's suffix.
-        got: u8,
-    },
 }
 
 #[cfg(test)]
@@ -131,48 +108,61 @@ mod tests {
             assert_eq!(decoded, u.as_u128(), "Test {name} failed: expected {uuid}, got {encoded}");
         }
 
-        assert!(matches!(decode_base32(""), Err(SuffixError::Length { got: 0 }),));
         assert!(matches!(
-            decode_base32("01h455vb4pex5vsknk084sn02"),
-            Err(SuffixError::Length { got: 25 })
+            decode_base32(""),
+            Err(IdError::SuffixBadLength { ref got, len: 0 }) if got.is_empty(),
         ));
+        let mut invalid_suffix = "01h455vb4pex5vsknk084sn02";
         assert!(matches!(
-            decode_base32("01h455vb4pex5vsknk084sn02qq"),
-            Err(SuffixError::Length { got: 27 })
-        ));
-        assert!(matches!(
-            decode_base32("01h455vb4pex5vsknk084sn02i"),
-            Err(SuffixError::Character { got: b'i' })
-        ));
-        assert!(matches!(
-            decode_base32("01h455vb4pex5vsknk084sn02-"),
-            Err(SuffixError::Character { got: b'-' })
+            decode_base32(invalid_suffix),
+            Err(IdError::SuffixBadLength { ref got, len: 25 }) if got == invalid_suffix
         ));
 
+        invalid_suffix = "01h455vb4pex5vsknk084sn02qq";
         assert!(matches!(
-            decode_base32("01H455VB4PEX5VSKNK084SN02Q"),
-            Err(SuffixError::Character { got: b'H' })
+            decode_base32(invalid_suffix),
+            Err(IdError::SuffixBadLength { ref got, len: 27 }) if got == invalid_suffix
+        ));
+
+        invalid_suffix = "01h455vb4pex5vsknk084sn02i";
+        assert!(matches!(
+            decode_base32(invalid_suffix),
+            Err(IdError::SuffixBadChar { ref got, index: 25 }) if got == invalid_suffix
+        ));
+
+        invalid_suffix = "01h455vb4pex5vsknk084sn02-";
+        assert!(matches!(
+            decode_base32(invalid_suffix),
+            Err(IdError::SuffixBadChar { ref got, index: 25 }) if got == invalid_suffix
+        ));
+
+        invalid_suffix = "01H455VB4PEX5VSKNK084SN02Q";
+        assert!(matches!(
+            decode_base32(invalid_suffix),
+            Err(IdError::SuffixBadChar { ref got, index: 2 }) if got == invalid_suffix
         ));
 
         // 25 characters but 26 bytes: `é` is U+00E9, which UTF-8 encodes as
         // two bytes. This is the case the byte-length note above exists for.
         // It must reach the character check rather than the length check.
+        invalid_suffix = "01h455vb4pex5vsknk084sn0é";
         assert!(matches!(
-            decode_base32("01h455vb4pex5vsknk084sn0é"),
-            Err(SuffixError::Character { got: 0xC3 })
+            decode_base32(invalid_suffix),
+            Err(IdError::SuffixBadChar { ref got, index: 24 }) if got == invalid_suffix
         ));
 
+        invalid_suffix = "0000000000000000000000000?";
         assert!(matches!(
-            decode_base32("0000000000000000000000000?"),
-            Err(SuffixError::Character { got: b'?' })
+            decode_base32(invalid_suffix),
+            Err(IdError::SuffixBadChar { ref got, index: 25 }) if got == invalid_suffix
         ));
         assert!(matches!(
             decode_base32("80000000000000000000000000"),
-            Err(SuffixError::FirstCharacter { got: b'8' })
+            Err(IdError::SuffixOverflow { got: b'8' })
         ));
         assert!(matches!(
             decode_base32("z0000000000000000000000000"),
-            Err(SuffixError::FirstCharacter { got: b'z' })
+            Err(IdError::SuffixOverflow { got: b'z' })
         ));
     }
 
@@ -222,7 +212,7 @@ mod tests {
             let as_str = str::from_utf8(&encoded).expect("the substituted byte is ASCII");
             let decoded = decode_base32(as_str);
             prop_assert!(
-                matches!(decoded, Err(SuffixError::FirstCharacter { .. })),
+                matches!(decoded, Err(IdError::SuffixOverflow { .. })),
                 "leading {c:?} should be rejected, got {decoded:?}"
             );
         }
@@ -237,7 +227,7 @@ mod tests {
             let as_str = str::from_utf8(&encoded).expect("the substituted byte is ASCII");
             let decoded = decode_base32(as_str);
             prop_assert!(
-                matches!(decoded, Err(SuffixError::Character { .. })),
+                matches!(decoded, Err(IdError::SuffixBadChar { .. })),
                 "{c:?} at index {at} should be rejected, got {decoded:?}"
             );
         }

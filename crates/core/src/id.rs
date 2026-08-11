@@ -9,11 +9,12 @@ use std::marker::PhantomData;
 
 use uuid::Uuid;
 
+mod error;
 mod prefix;
 mod suffix;
 
+pub use error::IdError;
 pub use prefix::IdPrefix;
-pub use suffix::SuffixError;
 use suffix::{decode_base32, encode_base32};
 
 /// Represents a domain record that has a unique identifier.
@@ -44,7 +45,7 @@ impl<T: Identifiable> Id<T> {
     pub fn from_uuid(id: Uuid) -> Result<Self, IdError> {
         match id.get_version_num() {
             7 => Ok(Self { id, _marker: PhantomData }),
-            version => Err(IdError::NotV7 { got: id, version }),
+            version => Err(IdError::UuidNotV7 { got: id, version }),
         }
     }
 
@@ -71,10 +72,9 @@ impl<T: Identifiable> std::str::FromStr for Id<T> {
             return Err(IdError::BadFormat { got: s.into() });
         };
         if prefix_str != T::PREFIX.as_str() {
-            return Err(IdError::BadPrefix { got: s.into(), expected: T::PREFIX.as_str() });
+            return Err(IdError::PrefixMismatch { got: s.into(), expected: T::PREFIX.as_str() });
         }
-        let suffix = decode_base32(suffix_str)
-            .map_err(|e| IdError::BadSuffix { got: s.into(), source: e })?;
+        let suffix = decode_base32(suffix_str)?;
         Self::from_uuid(Uuid::from_u128(suffix))
     }
 }
@@ -121,46 +121,6 @@ impl<T: Identifiable> std::hash::Hash for Id<T> {
     }
 }
 
-/// Errors related to record ids.
-#[derive(Debug, thiserror::Error)]
-#[non_exhaustive]
-pub enum IdError {
-    /// The UUID provided is not a version 7 UUID.
-    #[error("uuid is not version 7: {got} has version {version}")]
-    NotV7 {
-        /// The provided UUID.
-        got: Uuid,
-        /// The provided UUID's version.
-        version: usize,
-    },
-
-    /// A record id string is not in the correct format.
-    #[error("record id string is not in the correct format, got {got}")]
-    BadFormat {
-        /// The provided ID.
-        got: String,
-    },
-
-    /// A record id string has an invalid prefix.
-    #[error("record id string has an invalid prefix, got {got}, expected {expected}")]
-    BadPrefix {
-        /// The provided ID.
-        got: String,
-        /// The expected prefix for the record type.
-        expected: &'static str,
-    },
-
-    /// A record id string could not be parsed into a valid `Id`.
-    #[error("record id string has an invalid suffix, got {got}")]
-    BadSuffix {
-        /// The provided ID.
-        got: String,
-        /// The underlying error that occurred while parsing the ID.
-        #[source]
-        source: SuffixError,
-    },
-}
-
 #[cfg(test)]
 mod tests {
     use uuid::Timestamp;
@@ -197,7 +157,7 @@ mod tests {
         ));
         assert!(matches!(
             "bad_01h4559h7xgk9z5j1m2q3r4s5t".parse::<Id<TestRecord>>(),
-            Err(IdError::BadPrefix { .. })
+            Err(IdError::PrefixMismatch { .. })
         ));
     }
 
@@ -205,7 +165,7 @@ mod tests {
     fn test_record_id_rejects_bad_suffix() {
         assert!(matches!(
             "tst_not1a1typeid".parse::<Id<TestRecord>>(),
-            Err(IdError::BadSuffix { .. })
+            Err(IdError::SuffixBadLength { ref got, len: 12 }) if got == "not1a1typeid"
         ));
     }
 
