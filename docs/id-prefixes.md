@@ -8,9 +8,9 @@ The word "record" is deliberate: the glossary reserves "entity" for its accounti
 
 Prefixes that exist in code and are now permanent.
 
-| Record        | Prefix |
-| ------------- | ------ |
-| _nothing yet_ |        |
+| Record    | Prefix |
+| --------- | ------ |
+| Commodity | `cmo`  |
 
 ## Draft
 
@@ -24,7 +24,6 @@ Proposed, not yet implemented, still changeable.
 | Budget                | `bdg`  |
 | Business document     | `doc`  |
 | Checkpoint            | `cpt`  |
-| Commodity             | `cmo`  |
 | Device                | `dev`  |
 | Ledger                | `ldg`  |
 | Party                 | `pty`  |
