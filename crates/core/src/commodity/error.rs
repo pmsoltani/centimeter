@@ -67,6 +67,13 @@ pub enum CommodityError {
         got: usize,
     },
 
+    /// No commodity is registered under the given ID.
+    #[error("no commodity is registered with id '{id}'")]
+    NotFound {
+        /// The ID of the commodity that was not found.
+        id: CommodityId,
+    },
+
     /// A commodity scale exceeded [`Commodity::MAX_SCALE`](crate::Commodity::MAX_SCALE).
     #[error("commodity scale must be between 0 and {max}, got {got}")]
     ScaleTooLarge {

@@ -50,7 +50,7 @@ pub use registry::CommodityRegistry;
 /// # Ok(())
 /// # }
 /// ```
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone)]
 pub struct Commodity {
     /// The unique ID for this commodity.
     id: CommodityId,
@@ -72,6 +72,20 @@ impl Identifiable for Commodity {
 
 /// The id of a [`Commodity`], rendered as `cmo_<suffix>`.
 pub type CommodityId = Id<Commodity>;
+
+impl PartialEq for Commodity {
+    fn eq(&self, other: &Self) -> bool {
+        self.id == other.id
+    }
+}
+
+impl Eq for Commodity {}
+
+impl std::hash::Hash for Commodity {
+    fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
+        self.id.hash(state);
+    }
+}
 
 impl Commodity {
     /// The maximum length of a commodity name (counted in chars).
@@ -135,6 +149,20 @@ impl Commodity {
         Ok(Self { id, code, name, scale })
     }
 
+    /// Updates the display name, validating the replacement first.
+    ///
+    /// The name is the only commodity field that may change after registration.
+    /// `code` & `scale` are frozen, as amounts already recorded depend on them.
+    ///
+    /// # Errors
+    /// Returns an error if `name` is empty, exceeds
+    /// [`MAX_NAME_LENGTH`](Self::MAX_NAME_LENGTH) characters, or contains a
+    /// control character.
+    fn set_name(&mut self, name: &str) -> Result<(), CommodityError> {
+        self.name = Self::validate_name(name)?;
+        Ok(())
+    }
+
     /// Returns the commodity's id.
     #[must_use]
     pub fn id(&self) -> CommodityId {
@@ -191,18 +219,26 @@ pub(crate) mod tests {
         assert_eq!(ids.len(), 64, "distinct seeds must yield distinct ids");
     }
 
-    /// Builds a commodity through the private constructor, panicking on reject.
-    fn build(code: &str, name: &str, scale: u8) -> Commodity {
-        let code = CommodityCode::try_new(code).expect("test code must be valid");
-        Commodity::try_new(id(0), code, name, scale)
+    /// A validated code, for tests whose subject is not code validation.
+    fn valid_code(code: &str) -> CommodityCode {
+        CommodityCode::try_new(code).expect("test code must be valid")
+    }
+
+    /// Attempts a `USD` commodity under `id(0)` with the given name and scale.
+    fn try_build(name: &str, scale: u8) -> Result<Commodity, CommodityError> {
+        Commodity::try_new(id(0), valid_code("USD"), name, scale)
+    }
+
+    /// Same as [`try_build`], panicking if the input was rejected.
+    fn build(name: &str, scale: u8) -> Commodity {
+        try_build(name, scale)
             .unwrap_or_else(|e| panic!("{name:?} at scale {scale} should be accepted, got {e}"))
     }
 
     #[test]
     fn test_commodity_exposes_its_fields() {
         let cmo_id = id(1);
-        let code = CommodityCode::try_new("USD").unwrap();
-        let usd = Commodity::try_new(cmo_id, code, "US Dollar", 2).unwrap();
+        let usd = Commodity::try_new(cmo_id, valid_code("USD"), "US Dollar", 2).unwrap();
 
         assert_eq!(usd.id(), cmo_id);
         assert_eq!(usd.code(), "USD");
@@ -212,18 +248,14 @@ pub(crate) mod tests {
 
     #[test]
     fn test_name_is_trimmed() {
-        assert_eq!(build("USD", "  US Dollar \n", 2).name(), "US Dollar");
+        assert_eq!(build("  US Dollar \n", 2).name(), "US Dollar");
     }
 
     #[test]
     fn test_name_rejects_empty() {
-        let code = CommodityCode::try_new("USD").unwrap();
         for name in ["", "   ", "\t\n"] {
             assert!(
-                matches!(
-                    Commodity::try_new(id(0), code.clone(), name, 2),
-                    Err(CommodityError::NameEmpty)
-                ),
+                matches!(try_build(name, 2), Err(CommodityError::NameEmpty)),
                 "{name:?} should be rejected as empty"
             );
         }
@@ -233,28 +265,26 @@ pub(crate) mod tests {
     fn test_name_length_is_measured_in_chars() {
         // Exactly at the limit is fine, one over is not.
         let at_limit = "a".repeat(Commodity::MAX_NAME_LENGTH);
-        assert_eq!(build("USD", &at_limit, 2).name().chars().count(), Commodity::MAX_NAME_LENGTH);
+        assert_eq!(build(&at_limit, 2).name().chars().count(), Commodity::MAX_NAME_LENGTH);
 
         let over = "a".repeat(Commodity::MAX_NAME_LENGTH + 1);
-        let code = CommodityCode::try_new("USD").unwrap();
         assert!(matches!(
-            Commodity::try_new(id(0), code.clone(), &over, 2),
+            try_build(&over, 2),
             Err(CommodityError::NameTooLong { max: Commodity::MAX_NAME_LENGTH, got: 257 })
         ));
 
         // Chars, not bytes: 256 two-byte chars is 512 bytes and still accepted.
         let multibyte = "é".repeat(Commodity::MAX_NAME_LENGTH);
         assert_eq!(multibyte.len(), 2 * Commodity::MAX_NAME_LENGTH);
-        assert!(Commodity::try_new(id(0), code, &multibyte, 2).is_ok());
+        assert!(try_build(&multibyte, 2).is_ok());
     }
 
     #[test]
     fn test_name_rejects_control_chars() {
-        let code = CommodityCode::try_new("USD").unwrap();
         for (name, index) in [("US\u{7}Dollar", 2), ("a\rb", 1), ("x\u{1b}[2J", 1)] {
             assert!(
                 matches!(
-                    Commodity::try_new(id(0), code.clone(), name, 2),
+                    try_build(name, 2),
                     Err(CommodityError::NameBadChar { index: at, .. }) if at == index
                 ),
                 "{name:?} should be rejected at index {index}"
@@ -267,14 +297,13 @@ pub(crate) mod tests {
         // Names are display strings: accents, CJK, and symbols must survive.
         for name in ["US Dollar", "Café 🍰 Voucher", "日本円", "Brent Crude (bbl)", "£ sterling"]
         {
-            assert_eq!(build("USD", name, 2).name(), name);
+            assert_eq!(build(name, 2).name(), name);
         }
     }
 
     #[test]
     fn test_name_error_escapes_untrusted_input() {
-        let code = CommodityCode::try_new("USD").unwrap();
-        let err = Commodity::try_new(id(0), code, "US\u{1b}[2JD", 2).unwrap_err();
+        let err = try_build("US\u{1b}[2JD", 2).unwrap_err();
         let message = err.to_string();
         assert!(!message.contains('\u{1b}'), "message leaked a raw escape: {message:?}");
     }
@@ -283,12 +312,11 @@ pub(crate) mod tests {
     fn test_scale_bounds() {
         // JPY, USD, BTC, and the maximum all sit inside the accepted range.
         for scale in [0, 2, 8, Commodity::MAX_SCALE] {
-            assert_eq!(build("USD", "US Dollar", scale).scale(), scale);
+            assert_eq!(build("US Dollar", scale).scale(), scale);
         }
 
-        let code = CommodityCode::try_new("USD").unwrap();
         assert!(matches!(
-            Commodity::try_new(id(0), code, "US Dollar", Commodity::MAX_SCALE + 1),
+            try_build("US Dollar", Commodity::MAX_SCALE + 1),
             Err(CommodityError::ScaleTooLarge { max: Commodity::MAX_SCALE, got: 29 })
         ));
     }
@@ -307,12 +335,64 @@ pub(crate) mod tests {
         assert!(over.is_err(), "scale {} should be rejected", Commodity::MAX_SCALE + 1);
     }
 
+    #[test]
+    fn test_identity_is_by_id() {
+        let usd1 = build("US Dollar", 2);
+        let usd2 = Commodity::try_new(usd1.id(), valid_code("USD"), "US Dollar", 2).unwrap();
+        assert_eq!(usd1, usd2, "commodities with the same id must be equal");
+        let usd3 = Commodity::try_new(id(1), valid_code("USD"), "US Dollar", 2).unwrap();
+        assert_ne!(usd1, usd3, "commodities with different ids must not be equal");
+    }
+
+    #[test]
+    fn test_hash_is_by_id() {
+        let usd = build("US Dollar", 2);
+        // Same id, every other field different: still the same commodity.
+        let alias =
+            Commodity::try_new(id(0), valid_code("usd"), "United States Dollar", 3).unwrap();
+        let other = Commodity::try_new(id(1), valid_code("USD"), "US Dollar", 2).unwrap();
+
+        let mut set = std::collections::HashSet::new();
+        set.insert(usd);
+        set.insert(alias);
+        assert_eq!(set.len(), 1, "commodities with the same id must collapse to one entry");
+        set.insert(other);
+        assert_eq!(set.len(), 2, "commodities with different ids must be distinct entries");
+    }
+
+    #[test]
+    fn test_set_name_replaces_name() {
+        let mut usd = build("US Dollar", 2);
+        usd.set_name("United States Dollar").unwrap();
+        assert_eq!(usd.name(), "United States Dollar");
+        assert_eq!(usd.code(), "USD");
+        assert_eq!(usd.scale(), 2);
+    }
+
+    #[test]
+    fn test_set_name_rejects_invalid() {
+        let mut usd = build("US Dollar", 2);
+        for name in ["", "   ", "\t\n", "US\u{7}Dollar"] {
+            assert!(matches!(
+                usd.set_name(name),
+                Err(CommodityError::NameEmpty | CommodityError::NameBadChar { .. })
+            ));
+        }
+        assert_eq!(usd.name(), "US Dollar");
+    }
+
+    #[test]
+    fn test_set_name_trims() {
+        let mut usd = build("US Dollar", 2);
+        usd.set_name("  United States Dollar \n").unwrap();
+        assert_eq!(usd.name(), "United States Dollar");
+    }
+
     proptest! {
         /// Validation never panics, and acceptance implies the documented shape.
         #[test]
         fn prop_validation_is_total(name: String, scale: u8) {
-            let code = CommodityCode::try_new("USD").unwrap();
-            if let Ok(cmo) = Commodity::try_new(id(0), code, &name, scale) {
+            if let Ok(cmo) = try_build(&name, scale) {
                 prop_assert_eq!(cmo.name(), name.trim());
                 prop_assert!(!cmo.name().is_empty());
                 prop_assert!(cmo.name().chars().count() <= Commodity::MAX_NAME_LENGTH);
@@ -324,8 +404,7 @@ pub(crate) mod tests {
         /// Every scale in range is stored verbatim; every scale out of it is refused.
         #[test]
         fn prop_scale_is_bounded(scale: u8) {
-            let code = CommodityCode::try_new("USD").unwrap();
-            let built = Commodity::try_new(id(0), code, "US Dollar", scale);
+            let built = try_build("US Dollar", scale);
             if scale <= Commodity::MAX_SCALE {
                 prop_assert_eq!(built.unwrap().scale(), scale);
             } else {
