@@ -134,8 +134,9 @@ mod tests {
 
     use proptest::prelude::*;
 
-    use super::super::tests::id;
     use super::*;
+
+    use crate::test_support::id;
 
     /// Asserts the registry holds `code` under `id` with the given name/scale.
     fn assert_registered(reg: &CommodityRegistry, id: CommodityId, code: &str, scale: u8) {

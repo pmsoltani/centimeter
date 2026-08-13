@@ -199,28 +199,13 @@ impl std::ops::Neg for Quantity {
 }
 
 #[cfg(test)]
-pub(crate) mod tests {
+mod tests {
     use proptest::prelude::*;
     use rust_decimal::Decimal;
 
     use super::*;
 
-    use crate::commodity::CommodityRegistry;
-    use crate::commodity::tests::id;
-
-    fn registry() -> crate::CommodityRegistry {
-        let mut registry = CommodityRegistry::new();
-        registry.add(id(0), "USD", "US Dollar", 2).unwrap();
-        registry.add(id(1), "JPY", "Japanese Yen", 0).unwrap();
-        registry.add(id(2), "BTC", "Bitcoin", 8).unwrap();
-        registry.add(id(3), "HYP", "Hypothetical", 28).unwrap();
-        registry
-    }
-
-    fn q(number: Decimal, code: &str, registry: &CommodityRegistry) -> Quantity {
-        let commodity = registry.get_by_code(code).unwrap();
-        Quantity::try_new(number, commodity).unwrap()
-    }
+    use crate::test_support::{qty, registry};
 
     // Construction and scale normalisation
     #[test]
@@ -365,7 +350,7 @@ pub(crate) mod tests {
     fn test_neg_flips_sign_and_preserves_scale_and_commodity() {
         let registry = registry();
 
-        let a = q(Decimal::new(15, 1), "USD", &registry);
+        let a = qty(Decimal::new(15, 1), "USD", &registry);
         let neg_a = -a;
         assert_eq!(neg_a.number(), Decimal::new(-15, 1));
         assert_eq!(neg_a.number().scale(), 2);
@@ -388,8 +373,8 @@ pub(crate) mod tests {
     #[test]
     fn test_add_and_sub() {
         let registry = registry();
-        let a = q(Decimal::new(150, 1), "USD", &registry); // 15.0 USD
-        let b = q(Decimal::new(50, 2), "USD", &registry); // 0.50 USD
+        let a = qty(Decimal::new(150, 1), "USD", &registry); // 15.0 USD
+        let b = qty(Decimal::new(50, 2), "USD", &registry); // 0.50 USD
 
         let sum = a.checked_add(b).unwrap();
         assert_eq!(sum.number(), Decimal::new(1550, 2)); // 15.50 USD
@@ -401,8 +386,8 @@ pub(crate) mod tests {
     #[test]
     fn test_arithmetic_preserves_scale() {
         let registry = registry();
-        let a = q(Decimal::new(150, 1), "USD", &registry); // 15.0 USD
-        let b = q(Decimal::new(50, 2), "USD", &registry); // 0.50 USD
+        let a = qty(Decimal::new(150, 1), "USD", &registry); // 15.0 USD
+        let b = qty(Decimal::new(50, 2), "USD", &registry); // 0.50 USD
 
         let sum = a.checked_add(b).unwrap();
         assert_eq!(sum.number().scale(), 2);
@@ -416,8 +401,8 @@ pub(crate) mod tests {
         let registry = registry();
         let usd = registry.get_by_code("USD").unwrap();
         let jpy = registry.get_by_code("JPY").unwrap();
-        let a = q(Decimal::new(150, 1), "USD", &registry); // 15.0 USD
-        let b = q(Decimal::new(50, 0), "JPY", &registry); // 50 JPY
+        let a = qty(Decimal::new(150, 1), "USD", &registry); // 15.0 USD
+        let b = qty(Decimal::new(50, 0), "JPY", &registry); // 50 JPY
 
         assert!(matches!(
             a.checked_add(b),
@@ -432,8 +417,8 @@ pub(crate) mod tests {
         // its digits before the decimal point, so it cannot be rescaled to
         // USD's 2 places at all and would fail construction instead.
         let registry = registry();
-        let a = q(Decimal::MAX, "JPY", &registry);
-        let b = q(Decimal::ONE, "JPY", &registry);
+        let a = qty(Decimal::MAX, "JPY", &registry);
+        let b = qty(Decimal::ONE, "JPY", &registry);
 
         assert!(matches!(
             a.checked_add(b),
@@ -445,8 +430,8 @@ pub(crate) mod tests {
     #[test]
     fn test_sub_detects_overflow() {
         let registry = registry();
-        let a = q(Decimal::MIN, "JPY", &registry);
-        let b = q(Decimal::ONE, "JPY", &registry);
+        let a = qty(Decimal::MIN, "JPY", &registry);
+        let b = qty(Decimal::ONE, "JPY", &registry);
 
         assert!(matches!(
             a.checked_sub(b),
@@ -458,8 +443,8 @@ pub(crate) mod tests {
     #[test]
     fn test_add_detects_inexact() {
         let registry = registry();
-        let valid1 = q(Decimal::new(4, 0), "HYP", &registry); // 4.0000000000000000000000000000 HYP
-        let valid2 = q(Decimal::new(3, 0), "HYP", &registry); // 3.0000000000000000000000000000 HYP
+        let valid1 = qty(Decimal::new(4, 0), "HYP", &registry); // 4.0000000000000000000000000000 HYP
+        let valid2 = qty(Decimal::new(3, 0), "HYP", &registry); // 3.0000000000000000000000000000 HYP
 
         assert_eq!(valid1.checked_add(valid2).unwrap().number(), Decimal::new(7, 0));
 
@@ -530,8 +515,8 @@ pub(crate) mod tests {
         #[test]
         fn prop_arithmetic_never_changes_scale(a: i64, b: i64) {
             let registry = registry();
-            let x = q(Decimal::new(a, 2), "USD", &registry);
-            let y = q(Decimal::new(b, 2), "USD", &registry);
+            let x = qty(Decimal::new(a, 2), "USD", &registry);
+            let y = qty(Decimal::new(b, 2), "USD", &registry);
 
             prop_assert_eq!(x.checked_add(y).unwrap().number().scale(), 2);
             prop_assert_eq!(x.checked_sub(y).unwrap().number().scale(), 2);
@@ -542,8 +527,8 @@ pub(crate) mod tests {
         #[test]
         fn prop_add_is_commutative(a: i64, b: i64) {
             let registry = registry();
-            let x = q(Decimal::new(a, 2), "USD", &registry);
-            let y = q(Decimal::new(b, 2), "USD", &registry);
+            let x = qty(Decimal::new(a, 2), "USD", &registry);
+            let y = qty(Decimal::new(b, 2), "USD", &registry);
 
             prop_assert_eq!(x.checked_add(y).ok(), y.checked_add(x).ok());
         }
@@ -565,8 +550,8 @@ pub(crate) mod tests {
         #[test]
         fn prop_sub_is_add_of_neg(a: i64, b: i64) {
             let registry = registry();
-            let x = q(Decimal::new(a, 2), "USD", &registry);
-            let y = q(Decimal::new(b, 2), "USD", &registry);
+            let x = qty(Decimal::new(a, 2), "USD", &registry);
+            let y = qty(Decimal::new(b, 2), "USD", &registry);
 
             prop_assert_eq!(x.checked_sub(y).ok(), x.checked_add(-y).ok());
         }
@@ -575,8 +560,8 @@ pub(crate) mod tests {
         #[test]
         fn prop_add_then_sub_round_trips(a: i64, b: i64) {
             let registry = registry();
-            let x = q(Decimal::new(a, 2), "USD", &registry);
-            let y = q(Decimal::new(b, 2), "USD", &registry);
+            let x = qty(Decimal::new(a, 2), "USD", &registry);
+            let y = qty(Decimal::new(b, 2), "USD", &registry);
 
             let back = x.checked_add(y).unwrap().checked_sub(y);
             prop_assert!(back.is_ok(), "an exact round trip must succeed, got {back:?}");
@@ -587,7 +572,7 @@ pub(crate) mod tests {
         #[test]
         fn prop_neg_is_an_involution(a: i64) {
             let registry = registry();
-            let x = q(Decimal::new(a, 2), "USD", &registry);
+            let x = qty(Decimal::new(a, 2), "USD", &registry);
 
             prop_assert_eq!(-(-x), x);
             prop_assert_eq!((-x).commodity(), x.commodity());
@@ -598,8 +583,8 @@ pub(crate) mod tests {
         #[test]
         fn prop_never_produces_a_negative_zero(a: i64, b: i64) {
             let registry = registry();
-            let x = q(Decimal::new(a, 2), "USD", &registry);
-            let y = q(Decimal::new(b, 2), "USD", &registry);
+            let x = qty(Decimal::new(a, 2), "USD", &registry);
+            let y = qty(Decimal::new(b, 2), "USD", &registry);
 
             // `x - x` is the reliable way to reach zero on every case.
             let results = [Ok(-x), x.checked_sub(x), x.checked_add(y), x.checked_sub(y)];

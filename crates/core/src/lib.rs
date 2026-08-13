@@ -5,6 +5,9 @@ mod error;
 mod id;
 mod quantity;
 
+#[cfg(test)]
+mod test_support;
+
 pub use rust_decimal::Decimal;
 
 pub use commodity::{Commodity, CommodityError, CommodityId, CommodityRegistry};

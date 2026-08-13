@@ -190,27 +190,13 @@ impl Commodity {
 }
 
 #[cfg(test)]
-pub(crate) mod tests {
+mod tests {
     use proptest::prelude::*;
     use rust_decimal::Decimal;
-    use uuid::Uuid;
 
     use super::*;
 
-    /// Mints a distinct [`CommodityId`] from `seed`, reproducibly.
-    ///
-    /// Core never mints IDs itself ([`Id`] has no `new`), so tests stand in for
-    /// the caller that normally supplies them. `Uuid::new_v7` is deliberately
-    /// avoided here: it randomizes 74 of its bits, so the same seed would not
-    /// yield the same id twice and lookups could not be asserted against it.
-    pub(crate) fn id(seed: u64) -> CommodityId {
-        let mut bytes = [0u8; 16];
-        bytes[..8].copy_from_slice(&seed.to_be_bytes());
-        bytes[8..].copy_from_slice(&seed.to_be_bytes());
-        bytes[6] = (bytes[6] & 0x0F) | 0x70; // version 7
-        bytes[8] = (bytes[8] & 0x3F) | 0x80; // RFC 4122 variant
-        CommodityId::from_uuid(Uuid::from_bytes(bytes)).expect("bytes are stamped as v7")
-    }
+    use crate::test_support::id;
 
     #[test]
     fn test_id_helper_is_reproducible_and_distinct() {
