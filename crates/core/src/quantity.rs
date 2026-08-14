@@ -24,10 +24,10 @@ pub use error::QuantityError;
 
 /// An exact decimal amount denominated in one commodity.
 ///
-/// The number is stored at exactly the commodity's scale: [`try_new`] rescales
-/// it on the way in, and every operation preserves it. So `number().scale()`
-/// is always the commodity's scale, and further operations do not need to
-/// resolve the commodity again.
+/// The number is stored at exactly the commodity's scale: [`Quantity::try_new`]
+/// rescales it on the way in, and every operation preserves it. So
+/// `number().scale()` is always the commodity's scale, and further operations
+/// do not need to resolve the commodity again.
 ///
 /// A quantity is `Copy` and only stores the [`CommodityId`], not the commodity
 /// itself. To resolve it, use the registry when you need the code or name.
@@ -576,6 +576,20 @@ mod tests {
 
             prop_assert_eq!(-(-x), x);
             prop_assert_eq!((-x).commodity(), x.commodity());
+        }
+
+        /// Negation is the additive inverse: a quantity and its negation sum to
+        /// zero, in the same commodity. Correction by reversal depends on this,
+        /// since a reversal has to cancel its original exactly.
+        #[test]
+        fn prop_add_of_neg_is_zero(a: i64) {
+            let registry = registry();
+            let usd = registry.get_by_code("USD").unwrap();
+            let x = Quantity::try_new(Decimal::new(a, 2), usd).unwrap();
+
+            let sum = x.checked_add(-x).unwrap();
+            prop_assert!(sum.is_zero());
+            prop_assert_eq!(sum, Quantity::zero(usd));
         }
 
         /// No operation ever yields a negative zero, which would render as

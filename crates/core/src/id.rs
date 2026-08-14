@@ -123,6 +123,7 @@ impl<T: Identifiable> std::hash::Hash for Id<T> {
 
 #[cfg(test)]
 mod tests {
+    use proptest::prelude::*;
     use uuid::Timestamp;
 
     use super::*;
@@ -181,5 +182,30 @@ mod tests {
 
         assert_eq!(id1, id2);
         assert_eq!(id1, id3);
+    }
+
+    proptest! {
+        /// Every accepted uuid survives the trip out to the wire format and
+        /// back, which is the promise the whole TypeID scheme rests on. The
+        /// width is fixed too: ids never render ragged.
+        #[test]
+        fn prop_id_round_trips_through_its_string_form(bytes: [u8; 16]) {
+            // Arbitrary bytes are not a v7 uuid, and `from_uuid` refuses those
+            // by design, so stamp the two fields that identify the version.
+            let mut bytes = bytes;
+            bytes[6] = (bytes[6] & 0x0F) | 0x70; // version 7
+            bytes[8] = (bytes[8] & 0x3F) | 0x80; // RFC 4122 variant
+            let uuid = Uuid::from_bytes(bytes);
+
+            let id = Id::<TestRecord>::from_uuid(uuid).unwrap();
+            let rendered = id.to_string();
+
+            prop_assert!(rendered.starts_with("tst_"), "got {rendered}");
+            prop_assert_eq!(rendered.len(), "tst_".len() + 26);
+
+            let parsed: Id<TestRecord> = rendered.parse().unwrap();
+            prop_assert_eq!(parsed, id);
+            prop_assert_eq!(parsed.as_uuid(), uuid);
+        }
     }
 }
