@@ -31,6 +31,7 @@ Terms recurring in the ADRs are defined here. An ADR should link rather than re-
 - **amount / rate / value:** The core triple (`amount * rate = value`). `amount` is in the posting's specified commodity, `value` is in the ledger's functional currency, and `rate` bridges them. The authoritative pair `(amount, value)` is stored; `rate` is kept only as provenance and is never a check. The equation is exact **dimensionally** but holds only **to the value commodity's scale** numerically.
 - **Quantity:** "A number with a commodity" (`1.50 USD`), the shape shared by `amount` and `value`.
 - **Rate:** A general ratio between any two commodities, with a **base** (converted from) and a **quote** (converted to). Unconstrained by scale and permitted to be zero or negative.
+- **Rate direction:** A rate is written `quote/base`, read as a fraction: `JPY/USD = 150` is 150 JPY per USD. Market FX quoting reverses the naming order, so `EUR/USD` on a trading screen means USD per EUR, with EUR as the base. The two notations look identical and name the commodities in opposite orders, which is the likeliest way to enter a rate backwards.
 - **Price:** A special case of a rate where one of the commodities is a currency (typically the ledger's functional currency).
 - **Scale:** The number of decimal places an _amount_ in a given commodity may have. Binds stored amounts and values only.
 - **Functional currency:** The one currency a ledger balances in, fixed at the ledger level.

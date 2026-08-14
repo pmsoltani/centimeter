@@ -10,3 +10,4 @@
 mod commodity;
 mod fixtures;
 mod quantity;
+mod rate;
