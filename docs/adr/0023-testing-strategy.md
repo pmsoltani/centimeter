@@ -1,6 +1,6 @@
 ---
 status: ACCEPTED
-date: 2026-08-09
+date: 2026-08-16
 decision-makers: [pmsoltani, Claude]
 ---
 
@@ -19,14 +19,25 @@ Because the entire value proposition of `centimeter` is that the books are mathe
 - **Property Tests:** First-class usage of `proptest` to prove algebraic laws (e.g., any accepted transaction commits with a net value of exactly zero, quantity arithmetic perfectly preserves scale, and a derived `value` always equals `round(amount * rate)` at the value commodity's scale ([ADR-0005](0005-commodity-bearing-postings.md))).
 - **Parity Tests:** Where an invariant is enforced twice, a test proves the two agree. The SQLite suite asserts the database rejects exactly what the builder rejects ([ADR-0019](0019-storage-layer-constraints-and-sqlite.md)).
 - **Fuzzing:** `cargo-fuzz` targets are isolated in a workspace-excluded `fuzz/` directory to avoid forcing nightly Rust on standard developers ([ADR-0020](0020-cargo-workspace-structure.md)).
-- **Strict CI Gates:** Commits must pass `cargo test --workspace`, `cargo clippy --workspace --all-targets` (to catch test-code panics), and `cargo fmt --all --check`.
+- **Strict CI Gates:** Commits must pass all of the following:
+
+  ```bash
+  cargo test --workspace
+  cargo clippy --workspace --all-targets -- -D warnings
+  cargo fmt --all --check
+  cargo doc --workspace --no-deps
+  cargo check -p centimeter-core --target wasm32-unknown-unknown
+  ```
+
+  A warning is a failure. `-D warnings` does that for clippy; `[workspace.lints.rustdoc]` in `Cargo.toml` ensures it for `cargo doc`, which otherwise reports a broken doc link and still exits 0.
 
 ## Consequences
 
 - **Good:** Private invariants are tested where they live, while public behavior is tested exactly as a consumer experiences it.
 - **Good:** The single integration binary rule keeps link times flat as the project scales.
 - **Bad:** Inline unit tests inflate source file length, adding a visual readability cost.
+- **Bad:** The wasm gate binds every commit to a target the project does not otherwise build for. A dependency that breaks it has to be replaced rather than tolerated.
 
 ### Confirmation
 
-Each crate's `tests/` directory contains exactly one top-level file, `it/main.rs`. CI runs the three gate commands on every commit.
+Each crate's `tests/` directory contains exactly one top-level file, `it/main.rs`. CI runs all gate commands on every commit.

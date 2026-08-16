@@ -14,7 +14,7 @@ This directory is centimeter's decision record. Each file captures one architect
 | 0006 | [Balance in one functional currency](0006-one-functional-currency-per-ledger.md)                             | ACCEPTED | 2026-08-09 | `∑ value = 0` is one scalar equation, fixed at the ledger level.                         |
 | 0007 | [Enforce balance at one commit boundary](0007-enforce-balance-at-one-commit-boundary.md)                     | ACCEPTED | 2026-08-09 | A staging builder checks before persisting; reject, never auto-repair.                   |
 | 0008 | [The core transaction model](0008-core-transaction-model.md)                                                 | ACCEPTED | 2026-08-09 | One balanced-entry type, signed amounts; dr/cr converted at both edges, never stored.    |
-| 0009 | [A typed account tree with five fixed roots](0009-typed-account-tree-five-roots.md)                          | ACCEPTED | 2026-08-09 | Five IFRS elements, closed; the chart holds the type, rather than each account.          |
+| 0009 | [A typed account tree with five fixed roots](0009-typed-account-tree-five-roots.md)                          | ACCEPTED | 2026-08-16 | Five IFRS elements, closed; the chart holds the type; an account never changes it.       |
 | 0010 | [Multi-commodity accounts with per-commodity balances](0010-multi-commodity-accounts.md)                     | ACCEPTED | 2026-08-09 | No `commodity` field on `Account`; a balance query returns a set, not a scalar.          |
 | 0011 | [Record IDs: UUIDv7 inside, TypeID on the wire](0011-record-ids-uuidv7-typeid.md)                            | ACCEPTED | 2026-08-09 | `txn_01h455...` stored as TEXT; typed IDs; injectable generation; prefix rules.          |
 | 0012 | [Draft-to-posted lifecycle, correction by appending](0012-draft-posted-lifecycle-append-only.md)             | ACCEPTED | 2026-08-09 | Drafts edit freely; posted entries are corrected by reversal or adjustment.              |
@@ -28,7 +28,7 @@ This directory is centimeter's decision record. Each file captures one architect
 | 0020 | [Cargo virtual workspace structure](0020-cargo-workspace-structure.md)                                       | ACCEPTED | 2026-08-09 | The tree, the facade, growth triggers, and the silent-failure traps.                     |
 | 0021 | [License under MIT OR Apache-2.0](0021-dual-license-mit-apache.md)                                           | ACCEPTED | 2026-08-09 | Patent grant from Apache, GPLv2 compatibility from MIT; permissive is deliberate.        |
 | 0022 | [Errors as values: per-domain enums](0022-errors-as-values-per-domain-enums.md)                              | ACCEPTED | 2026-08-09 | Domain enums plus a thin transparent root; `Result` versus `panic!` layering.            |
-| 0023 | [Testing strategy](0023-testing-strategy.md)                                                                 | ACCEPTED | 2026-08-09 | Inline units, one integration binary per crate, property tests, the three commands.      |
+| 0023 | [Testing strategy](0023-testing-strategy.md)                                                                 | ACCEPTED | 2026-08-16 | Inline units, one integration binary per crate, property tests, the gates.               |
 | 0024 | [Commodity identity, and the registry](0024-commodity-identity-and-registry.md)                              | ACCEPTED | 2026-08-11 | Identity is the id; the registry is the only constructor; code and scale are frozen.     |
 
 ## Reading order for newcomers

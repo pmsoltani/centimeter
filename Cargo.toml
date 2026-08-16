@@ -31,3 +31,6 @@ unwrap_used = "warn"
 expect_used = "warn"
 dbg_macro = "warn"
 todo = "warn"
+
+[workspace.lints.rustdoc]
+all = "deny"
