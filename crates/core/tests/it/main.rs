@@ -7,6 +7,7 @@
 // helpers in an integration binary need the exemption spelled out.
 #![allow(clippy::expect_used)]
 
+mod account;
 mod commodity;
 mod fixtures;
 mod quantity;
