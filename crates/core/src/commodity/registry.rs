@@ -59,7 +59,7 @@ impl CommodityRegistry {
     ///
     /// # Errors
     /// Checks run in this order:
-    /// 1. `code` is malformed; see the [`code`](super::code) module.
+    /// 1. `code` is malformed; see the `Code*` variants of [`CommodityError`].
     /// 2. [`DuplicateId`](CommodityError::DuplicateId) if `id` is taken.
     /// 3. [`DuplicateCode`](CommodityError::DuplicateCode) if `code` is taken,
     ///    naming the commodity already holding it.
