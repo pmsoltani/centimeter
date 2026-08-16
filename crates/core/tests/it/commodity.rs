@@ -115,7 +115,7 @@ fn commodity_ids_are_prefixed_and_round_trip_as_strings() {
 
 #[test]
 fn an_id_minted_for_another_record_does_not_parse_as_a_commodity_id() {
-    let id = new_id();
+    let id: CommodityId = new_id();
     let foreign = id.to_string().replace("cmo_", "acc_");
 
     let err = foreign.parse::<CommodityId>().expect_err("a foreign prefix must not parse");

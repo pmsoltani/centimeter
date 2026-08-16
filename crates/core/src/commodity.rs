@@ -200,8 +200,9 @@ mod tests {
 
     #[test]
     fn test_id_helper_is_reproducible_and_distinct() {
-        assert_eq!(id(7), id(7), "the same seed must yield the same id");
-        let ids: std::collections::HashSet<_> = (0..64).map(id).collect();
+        // `id` is generic over the record type, and nothing here constrains it.
+        assert_eq!(id::<Commodity>(7), id::<Commodity>(7), "the same seed must yield the same id");
+        let ids: std::collections::HashSet<_> = (0..64).map(id::<Commodity>).collect();
         assert_eq!(ids.len(), 64, "distinct seeds must yield distinct ids");
     }
 
