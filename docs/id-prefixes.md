@@ -10,6 +10,7 @@ Prefixes that exist in code and are now permanent.
 
 | Record    | Prefix |
 | --------- | ------ |
+| Account   | `acc`  |
 | Commodity | `cmo`  |
 
 ## Draft
@@ -18,7 +19,6 @@ Proposed, not yet implemented, still changeable.
 
 | Record                | Prefix |
 | --------------------- | ------ |
-| Account               | `acc`  |
 | Attachment            | `att`  |
 | Balance assertion     | `asr`  |
 | Budget                | `bdg`  |

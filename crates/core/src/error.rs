@@ -1,11 +1,15 @@
 //! The crate's composing root error.
 
-use crate::{CommodityError, IdError, QuantityError, RateError};
+use crate::{AccountError, CommodityError, IdError, QuantityError, RateError};
 
 /// Any error the core can produce.
 #[derive(Debug, thiserror::Error)]
 #[non_exhaustive]
 pub enum Error {
+    /// The error is related to accounts.
+    #[error(transparent)]
+    Account(#[from] AccountError),
+
     /// The error is related to commodities.
     #[error(transparent)]
     Commodity(#[from] CommodityError),

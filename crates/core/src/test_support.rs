@@ -2,7 +2,9 @@
 
 use uuid::Uuid;
 
-use crate::{CommodityRegistry, Decimal, Id, Identifiable, Quantity};
+use crate::{
+    ChartOfAccounts, CommodityRegistry, Decimal, Id, Identifiable, Quantity, RootSpec, RootsSpec,
+};
 
 /// Mints a distinct [`Id`] from `seed`, reproducibly.
 ///
@@ -27,6 +29,22 @@ pub(crate) fn registry() -> CommodityRegistry {
     registry.add(id(2), "BTC", "Bitcoin", 8).expect("Failed to add BTC");
     registry.add(id(3), "HYP", "Hypothetical", 28).expect("Failed to add HYP");
     registry
+}
+
+/// A chart holding only its five roots, seeded from ids 1 to 5.
+///
+/// Reach the root ids through [`ChartOfAccounts::roots`] rather than by
+/// rebuilding them from seeds, so a test reads the same way a caller would.
+/// Ids 1 to 5 are taken; use 10 upwards for accounts a test adds itself.
+pub(crate) fn chart() -> ChartOfAccounts {
+    ChartOfAccounts::try_new(RootsSpec {
+        asset: RootSpec { id: id(1), name: "Assets" },
+        liability: RootSpec { id: id(2), name: "Liabilities" },
+        equity: RootSpec { id: id(3), name: "Equity" },
+        income: RootSpec { id: id(4), name: "Income" },
+        expense: RootSpec { id: id(5), name: "Expenses" },
+    })
+    .expect("the fixture must build")
 }
 
 /// Returns a quantity with the given number and commodity code, using the
