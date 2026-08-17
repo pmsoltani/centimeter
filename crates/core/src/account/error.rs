@@ -58,12 +58,15 @@ pub enum AccountError {
         max: usize,
     },
 
-    /// An account name has invalid characters.
-    #[error("account name has invalid characters, got '{}' at index {index}", got.escape_debug())]
+    /// An account name has an invalid character.
+    #[error(
+        "account name has an invalid character, got '{}' at index {index}",
+        character.escape_debug()
+    )]
     NameBadChar {
-        /// The account name that has invalid characters.
-        got: String,
-        /// The index of the invalid character.
+        /// The rejected character.
+        character: char,
+        /// The byte offset of the invalid character.
         index: usize,
     },
 

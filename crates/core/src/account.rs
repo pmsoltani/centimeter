@@ -15,7 +15,7 @@
 //! change one. That is what lets a mutation be checked against its siblings
 //! and its ancestors, neither of which an `Account` can see by itself.
 
-use crate::{Id, IdPrefix, Identifiable};
+use crate::{Id, IdPrefix, Identifiable, Text, TextProblem, TextSpec};
 
 mod chart;
 mod element;
@@ -68,7 +68,7 @@ pub struct Account {
     /// The unique id for this account.
     id: AccountId,
     /// The display name, unique among the account's siblings.
-    name: String,
+    name: AccountName,
     /// The parent account, or `None` for exactly the five roots.
     parent_id: Option<AccountId>,
 }
@@ -80,21 +80,32 @@ impl Identifiable for Account {
 /// The id of an [`Account`], rendered as `acc_<suffix>`.
 pub type AccountId = Id<Account>;
 
-impl Account {
-    // TODO: Consider refactoring the `name` fields of `Account` and `Commodity`
-    // into a newtype, making the code more DRY.
+struct AccountNameSpec;
+impl TextSpec for AccountNameSpec {
+    type Error = AccountError;
+    fn map_error(problem: TextProblem) -> Self::Error {
+        match problem {
+            TextProblem::TooShort { .. } => AccountError::NameEmpty,
+            TextProblem::TooLong { max, got } => AccountError::NameTooLong { max, got },
+            TextProblem::BadChar { character, index } => {
+                AccountError::NameBadChar { character, index }
+            }
+        }
+    }
+}
+type AccountName = Text<AccountNameSpec>;
 
+impl Account {
     /// The maximum length of an account name (counted in chars).
-    pub const MAX_NAME_LENGTH: usize = 256;
+    pub const MAX_NAME_LENGTH: usize = AccountNameSpec::MAX_LENGTH;
 
     /// Builds an account from parts the chart has already validated.
     ///
-    /// Infallible by design. The chart has to run
-    /// [`validate_name`](Self::validate_name) before it can check the result
-    /// for uniqueness among siblings, so re-validating here would be doing the
-    /// same work twice and calling it safety.
+    /// Infallible by design: an `AccountName` cannot exist without having been
+    /// validated, and the chart is the only caller, so it has already ensured
+    /// that the parent exists and that no sibling has the name.
     #[must_use]
-    fn new(id: AccountId, name: String, parent_id: Option<AccountId>) -> Self {
+    fn new(id: AccountId, name: AccountName, parent_id: Option<AccountId>) -> Self {
         Self { id, name, parent_id }
     }
 
@@ -107,7 +118,7 @@ impl Account {
     /// Returns the account's display name.
     #[must_use]
     pub fn name(&self) -> &str {
-        &self.name
+        self.name.as_str()
     }
 
     /// Returns the id of the account's parent, or `None` if it is a root.
@@ -127,37 +138,9 @@ impl Account {
         self.parent_id.is_none()
     }
 
-    /// Trims `name` and returns it, or says why it is unusable.
-    ///
-    /// Surrounding whitespace is discarded rather than rejected, so the
-    /// returned string is what the account will store and what a uniqueness
-    /// check must compare against.
-    ///
-    /// # Errors
-    /// - [`NameEmpty`](AccountError::NameEmpty) if `name` is empty or only
-    ///   whitespace.
-    /// - [`NameTooLong`](AccountError::NameTooLong) if `name` exceeds
-    ///   [`MAX_NAME_LENGTH`](Self::MAX_NAME_LENGTH) characters.
-    /// - [`NameBadChar`](AccountError::NameBadChar) if `name` contains a
-    ///   control character.
-    fn validate_name(name: &str) -> Result<String, AccountError> {
-        let name = name.trim();
-        let len = name.chars().count();
-        if name.is_empty() {
-            return Err(AccountError::NameEmpty);
-        }
-        if Self::MAX_NAME_LENGTH < len {
-            return Err(AccountError::NameTooLong { max: Self::MAX_NAME_LENGTH, got: len });
-        }
-        if let Some((index, _)) = name.char_indices().find(|(_, c)| c.is_control()) {
-            return Err(AccountError::NameBadChar { got: name.to_string(), index });
-        }
-        Ok(name.to_string())
-    }
-
     /// Replaces the display name with one the chart has already validated and
     /// checked for uniqueness among siblings.
-    fn set_name(&mut self, name: String) {
+    fn set_name(&mut self, name: AccountName) {
         self.name = name;
     }
 
@@ -197,7 +180,7 @@ mod tests {
 
     /// An account under `id(0)`, with the given name, parented to `id(9)`.
     fn build(name: &str) -> Account {
-        let validated = Account::validate_name(name)
+        let validated = AccountName::try_new(name)
             .unwrap_or_else(|e| panic!("{name:?} should be accepted, got {e}"));
         Account::new(id(0), validated, Some(id(9)))
     }
@@ -213,68 +196,30 @@ mod tests {
 
     #[test]
     fn test_a_parentless_account_is_a_root() {
-        let root = Account::new(id(1), "Assets".to_string(), None);
+        let name = AccountName::try_new("Assets").unwrap();
+        let root = Account::new(id(1), name, None);
         assert!(root.is_root());
         assert_eq!(root.parent_id(), None);
     }
 
+    /// Each `TextProblem` reaches the caller as the matching `AccountError`.
     #[test]
-    fn test_name_is_trimmed() {
-        assert_eq!(build("  Bank \n").name(), "Bank");
-    }
-
-    #[test]
-    fn test_name_rejects_empty() {
-        for name in ["", "   ", "\t\n"] {
-            assert!(
-                matches!(Account::validate_name(name), Err(AccountError::NameEmpty)),
-                "{name:?} should be rejected as empty"
-            );
-        }
-    }
-
-    #[test]
-    fn test_name_length_is_measured_in_chars() {
-        // Exactly at the limit is fine, one over is not.
-        let at_limit = "a".repeat(Account::MAX_NAME_LENGTH);
-        assert_eq!(build(&at_limit).name().chars().count(), Account::MAX_NAME_LENGTH);
-
-        let over = "a".repeat(Account::MAX_NAME_LENGTH + 1);
+    fn test_name_problems_map_to_account_errors() {
+        let over = "a".repeat(AccountNameSpec::MAX_LENGTH + 1);
+        assert!(matches!(AccountName::try_new("  "), Err(AccountError::NameEmpty)));
         assert!(matches!(
-            Account::validate_name(&over),
-            Err(AccountError::NameTooLong { max: Account::MAX_NAME_LENGTH, got: 257 })
+            AccountName::try_new(&over),
+            Err(AccountError::NameTooLong { max: AccountNameSpec::MAX_LENGTH, got: 257 })
         ));
-
-        // Chars, not bytes: 256 two-byte chars is 512 bytes and still accepted.
-        let multibyte = "é".repeat(Account::MAX_NAME_LENGTH);
-        assert_eq!(multibyte.len(), 2 * Account::MAX_NAME_LENGTH);
-        assert!(Account::validate_name(&multibyte).is_ok());
-    }
-
-    #[test]
-    fn test_name_rejects_control_chars() {
-        for (name, index) in [("Ba\u{7}nk", 2), ("a\rb", 1), ("x\u{1b}[2J", 1)] {
-            assert!(
-                matches!(
-                    Account::validate_name(name),
-                    Err(AccountError::NameBadChar { index: at, .. }) if at == index
-                ),
-                "{name:?} should be rejected at index {index}"
-            );
-        }
-    }
-
-    #[test]
-    fn test_name_allows_non_control_unicode() {
-        // Names are display strings: accents, CJK and symbols must survive.
-        for name in ["Bank", "Café ☕ Petty Cash", "現金", "Expenses (2026)", "£ float"] {
-            assert_eq!(build(name).name(), name);
-        }
+        assert!(matches!(
+            AccountName::try_new("Fixed\u{7}Assets"),
+            Err(AccountError::NameBadChar { character: '\u{7}', index: 5 })
+        ));
     }
 
     #[test]
     fn test_name_error_escapes_untrusted_input() {
-        let err = Account::validate_name("Ba\u{1b}[2Jnk").unwrap_err();
+        let err = AccountName::try_new("Ba\u{1b}[2Jnk").unwrap_err();
         let message = err.to_string();
         assert!(!message.contains('\u{1b}'), "message leaked a raw escape: {message:?}");
     }
@@ -284,10 +229,12 @@ mod tests {
     #[test]
     fn test_identity_is_by_id() {
         let bank = build("Bank");
-        let renamed = Account::new(bank.id(), "Current Account".to_string(), None);
+        let new_name = AccountName::try_new("Current Account").unwrap();
+        let renamed = Account::new(bank.id(), new_name, None);
         assert_eq!(bank, renamed, "same id must mean the same account");
 
-        let other = Account::new(id(1), "Bank".to_string(), Some(id(9)));
+        let other_name = AccountName::try_new("Bank").unwrap();
+        let other = Account::new(id(1), other_name, Some(id(9)));
         assert_ne!(bank, other, "different ids must mean different accounts");
     }
 
@@ -295,8 +242,11 @@ mod tests {
     fn test_hash_is_by_id() {
         let bank = build("Bank");
         // Same id, every other field different: still the same account.
-        let alias = Account::new(id(0), "Current Account".to_string(), None);
-        let other = Account::new(id(1), "Bank".to_string(), Some(id(9)));
+        let new_name = AccountName::try_new("Current Account").unwrap();
+        let other_name = AccountName::try_new("Bank").unwrap();
+
+        let alias = Account::new(id(0), new_name, None);
+        let other = Account::new(id(1), other_name, Some(id(9)));
 
         let mut set = HashSet::new();
         set.insert(bank);
@@ -309,7 +259,8 @@ mod tests {
     #[test]
     fn test_set_name_replaces_the_name_only() {
         let mut account = build("Bank");
-        account.set_name("Current Account".to_string());
+        let new_name = AccountName::try_new("Current Account").unwrap();
+        account.set_name(new_name);
         assert_eq!(account.name(), "Current Account");
         assert_eq!(account.id(), id(0));
         assert_eq!(account.parent_id(), Some(id(9)));
@@ -319,7 +270,8 @@ mod tests {
     /// express "make this account a sixth root".
     #[test]
     fn test_set_parent_id_never_produces_a_root() {
-        let mut root = Account::new(id(1), "Assets".to_string(), None);
+        let name = AccountName::try_new("Assets").unwrap();
+        let mut root = Account::new(id(1), name, None);
         assert!(root.is_root());
         root.set_parent_id(id(2));
         assert_eq!(root.parent_id(), Some(id(2)));
@@ -327,37 +279,17 @@ mod tests {
     }
 
     proptest! {
-        /// Validation never panics, and acceptance implies the documented shape.
-        #[test]
-        fn prop_validation_is_total(name: String) {
-            if let Ok(validated) = Account::validate_name(&name) {
-                prop_assert_eq!(&validated, name.trim());
-                prop_assert!(!validated.is_empty());
-                prop_assert!(validated.chars().count() <= Account::MAX_NAME_LENGTH);
-                prop_assert!(!validated.chars().any(char::is_control));
-            }
-        }
-
-        /// Validation is idempotent: feeding an accepted name back in returns
-        /// it unchanged. The chart relies on this when it compares a validated
-        /// name against names already stored.
-        #[test]
-        fn prop_validation_is_idempotent(name: String) {
-            if let Ok(once) = Account::validate_name(&name) {
-                let twice = Account::validate_name(&once).ok();
-                prop_assert_eq!(twice, Some(once));
-            }
-        }
-
         /// Equality tracks the id and nothing else, whatever the other fields.
         #[test]
-        fn prop_equality_follows_the_id2(
+        fn prop_equality_follows_the_id(
             seed: u32,
             same: bool,
             left_name in "[A-Za-z][A-Za-z ]{0,19}",
             right_name in "[A-Za-z][A-Za-z ]{0,19}",
         ) {
             let other = if same { seed } else { seed.wrapping_add(1) };
+            let left_name = AccountName::try_new(&left_name).unwrap();
+            let right_name = AccountName::try_new(&right_name).unwrap();
             let left = Account::new(id(u64::from(seed)), left_name, None);
             let right = Account::new(id(u64::from(other)), right_name, Some(id(9)));
             prop_assert_eq!(left == right, same);

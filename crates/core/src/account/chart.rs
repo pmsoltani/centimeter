@@ -18,6 +18,7 @@
 use std::collections::HashMap;
 
 use super::{Account, AccountError, AccountId, AccountType, RootAccounts, RootsSpec};
+use crate::account::AccountName;
 
 mod query;
 
@@ -143,8 +144,8 @@ impl ChartOfAccounts {
         let parent_id = self.get(id).ok_or(AccountError::NotFound { id })?.parent_id();
         // Validate before comparing, so "  Bank  " cannot pass the uniqueness
         // check and then trim into a duplicate.
-        let name = Account::validate_name(name)?;
-        self.check_name(Some(id), &name, parent_id)?;
+        let name = AccountName::try_new(name)?;
+        self.check_unique(Some(id), &name, parent_id)?;
         let account = self.accounts.get_mut(&id).ok_or(AccountError::NotFound { id })?;
         account.set_name(name);
         Ok(())
@@ -180,9 +181,11 @@ impl ChartOfAccounts {
         if self.makes_cycle(id, parent_id)? {
             return Err(AccountError::CycleDetected { id, parent_id });
         }
-        // The name has to clear the destination's children.
-        let name = self.get(id).ok_or(AccountError::NotFound { id })?.name();
-        self.check_name(Some(id), name, Some(parent_id))?;
+        // The name has to clear the destination's children. It is already
+        // valid, and will not be revalidated: tightening the character policy
+        // later must not make an account that predates the change unmovable.
+        let name = &self.get(id).ok_or(AccountError::NotFound { id })?.name;
+        self.check_unique(Some(id), name, Some(parent_id))?;
         let account = self.accounts.get_mut(&id).ok_or(AccountError::NotFound { id })?;
         account.set_parent_id(parent_id);
         Ok(())
@@ -194,18 +197,17 @@ impl ChartOfAccounts {
     /// `id` is the account being renamed or moved in place, which must not be
     /// treated as colliding with itself.
     ///
-    /// `name` must already have been through [`Account::validate_name`], since
-    /// stored names are trimmed.
-    fn check_name(
+    /// `name` has already been validated and comes in the form of `AccountName`
+    /// rather than a `&str`.
+    fn check_unique(
         &self,
         id: Option<AccountId>,
-        name: &str,
+        name: &AccountName,
         parent_id: Option<AccountId>,
     ) -> Result<(), AccountError> {
-        let clash = self
-            .accounts
-            .values()
-            .find(|a| a.parent_id() == parent_id && Some(a.id()) != id && a.name() == name);
+        let clash = self.accounts.values().find(|a| {
+            a.parent_id() == parent_id && Some(a.id()) != id && a.name.as_str() == name.as_str()
+        });
         match clash {
             Some(a) => Err(AccountError::DuplicateName { id: a.id(), name: name.to_string() }),
             None => Ok(()),
@@ -222,8 +224,8 @@ impl ChartOfAccounts {
         if self.accounts.contains_key(&id) {
             return Err(AccountError::DuplicateId { id });
         }
-        let name = Account::validate_name(name)?;
-        self.check_name(None, &name, parent_id)?;
+        let name = AccountName::try_new(name)?;
+        self.check_unique(None, &name, parent_id)?;
         self.accounts.insert(id, Account::new(id, name, parent_id));
         Ok(())
     }
@@ -639,15 +641,18 @@ mod tests {
     }
 
     #[test]
-    fn test_check_name_excludes_only_the_named_account() {
+    fn test_check_unique_excludes_only_the_named_account() {
         let mut coa = chart();
         let asset = coa.roots().asset();
         coa.add(id(10), "Bank", asset).unwrap();
 
-        assert!(coa.check_name(None, "Bank", Some(asset)).is_err(), "a new account collides");
-        assert!(coa.check_name(Some(id(10)), "Bank", Some(asset)).is_ok(), "it is itself");
-        assert!(coa.check_name(None, "Bank", Some(coa.roots().equity())).is_ok(), "other parent");
-        assert!(coa.check_name(None, "Assets", None).is_err(), "roots are siblings");
+        let bank = AccountName::try_new("Bank").unwrap();
+        let assets = AccountName::try_new("Assets").unwrap();
+        assert!(coa.check_unique(None, &bank, Some(asset)).is_err(), "a new account collides");
+        assert!(coa.check_unique(Some(id(10)), &bank, Some(asset)).is_ok(), "it is itself");
+        let equity = coa.roots().equity();
+        assert!(coa.check_unique(None, &bank, Some(equity)).is_ok(), "another parent is free");
+        assert!(coa.check_unique(None, &assets, None).is_err(), "roots are siblings");
     }
 
     proptest! {
