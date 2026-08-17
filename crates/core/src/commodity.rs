@@ -14,7 +14,7 @@
 //! A [`CommodityRegistry`] owns every commodity a ledger can post in, and is
 //! the only way to create one.
 
-use crate::{Id, IdPrefix, Identifiable};
+use crate::{Id, IdPrefix, Identifiable, Text, TextProblem, TextSpec};
 
 mod code;
 mod error;
@@ -58,7 +58,7 @@ pub struct Commodity {
     code: CommodityCode,
     /// The human-readable display name (e.g. `"US Dollar"`, `"Apple Inc."`,
     /// `"Bitcoin"`, `"Hour"`).
-    name: String,
+    name: CommodityName,
     /// The number of decimal places for quantities denominated in this
     /// commodity. The smallest representable increment is `10^-scale`:
     /// 0 for JPY, 2 for USD, 8 for BTC.
@@ -72,6 +72,21 @@ impl Identifiable for Commodity {
 
 /// The id of a [`Commodity`], rendered as `cmo_<suffix>`.
 pub type CommodityId = Id<Commodity>;
+
+struct CommodityNameSpec;
+impl TextSpec for CommodityNameSpec {
+    type Error = CommodityError;
+    fn map_error(problem: TextProblem) -> Self::Error {
+        match problem {
+            TextProblem::TooShort { .. } => CommodityError::NameEmpty,
+            TextProblem::TooLong { max, got } => CommodityError::NameTooLong { max, got },
+            TextProblem::BadChar { character, index } => {
+                CommodityError::NameBadChar { character, index }
+            }
+        }
+    }
+}
+type CommodityName = Text<CommodityNameSpec>;
 
 impl PartialEq for Commodity {
     fn eq(&self, other: &Self) -> bool {
@@ -89,7 +104,7 @@ impl std::hash::Hash for Commodity {
 
 impl Commodity {
     /// The maximum length of a commodity name (counted in chars).
-    pub const MAX_NAME_LENGTH: usize = 256;
+    pub const MAX_NAME_LENGTH: usize = CommodityNameSpec::MAX_LENGTH;
 
     /// The upper bound for [`Commodity::scale`], fixed by `rust_decimal`'s
     /// limit of 28 decimal places.
@@ -97,22 +112,6 @@ impl Commodity {
     /// Scale is not precision: a commodity declared at 28 cannot represent
     /// numbers much above 7.9, because the mantissa is only 96 bits.
     pub const MAX_SCALE: u8 = 28;
-
-    fn validate_name(name: &str) -> Result<String, CommodityError> {
-        let name = name.trim();
-        let len = name.chars().count();
-        if name.is_empty() {
-            return Err(CommodityError::NameEmpty);
-        }
-        if Self::MAX_NAME_LENGTH < len {
-            return Err(CommodityError::NameTooLong { max: Self::MAX_NAME_LENGTH, got: len });
-        }
-        if let Some((index, _)) = name.char_indices().find(|(_, c)| c.is_control()) {
-            return Err(CommodityError::NameBadChar { got: name.to_string(), index });
-        }
-
-        Ok(name.to_string())
-    }
 
     fn validate_scale(scale: u8) -> Result<u8, CommodityError> {
         if Self::MAX_SCALE < scale {
@@ -144,7 +143,7 @@ impl Commodity {
         name: &str,
         scale: u8,
     ) -> Result<Self, CommodityError> {
-        let name = Self::validate_name(name)?;
+        let name = CommodityName::try_new(name)?;
         let scale = Self::validate_scale(scale)?;
         Ok(Self { id, code, name, scale })
     }
@@ -159,7 +158,7 @@ impl Commodity {
     /// [`MAX_NAME_LENGTH`](Self::MAX_NAME_LENGTH) characters, or contains a
     /// control character.
     fn set_name(&mut self, name: &str) -> Result<(), CommodityError> {
-        self.name = Self::validate_name(name)?;
+        self.name = CommodityName::try_new(name)?;
         Ok(())
     }
 
@@ -178,7 +177,7 @@ impl Commodity {
     /// Returns the commodity's human-readable name (e.g. `"US Dollar"`).
     #[must_use]
     pub fn name(&self) -> &str {
-        &self.name
+        self.name.as_str()
     }
 
     /// Returns the commodity's scale: the number of decimal places for
@@ -233,59 +232,19 @@ mod tests {
         assert_eq!(usd.scale(), 2);
     }
 
+    /// Each `TextProblem` reaches the caller as the matching `CommodityError`.
     #[test]
-    fn test_name_is_trimmed() {
-        assert_eq!(build("  US Dollar \n", 2).name(), "US Dollar");
-    }
-
-    #[test]
-    fn test_name_rejects_empty() {
-        for name in ["", "   ", "\t\n"] {
-            assert!(
-                matches!(try_build(name, 2), Err(CommodityError::NameEmpty)),
-                "{name:?} should be rejected as empty"
-            );
-        }
-    }
-
-    #[test]
-    fn test_name_length_is_measured_in_chars() {
-        // Exactly at the limit is fine, one over is not.
-        let at_limit = "a".repeat(Commodity::MAX_NAME_LENGTH);
-        assert_eq!(build(&at_limit, 2).name().chars().count(), Commodity::MAX_NAME_LENGTH);
-
-        let over = "a".repeat(Commodity::MAX_NAME_LENGTH + 1);
+    fn test_name_problems_map_to_commodity_errors() {
+        let over = "a".repeat(CommodityNameSpec::MAX_LENGTH + 1);
+        assert!(matches!(try_build("  ", 2), Err(CommodityError::NameEmpty)));
         assert!(matches!(
             try_build(&over, 2),
-            Err(CommodityError::NameTooLong { max: Commodity::MAX_NAME_LENGTH, got: 257 })
+            Err(CommodityError::NameTooLong { max: CommodityNameSpec::MAX_LENGTH, got: 257 })
         ));
-
-        // Chars, not bytes: 256 two-byte chars is 512 bytes and still accepted.
-        let multibyte = "é".repeat(Commodity::MAX_NAME_LENGTH);
-        assert_eq!(multibyte.len(), 2 * Commodity::MAX_NAME_LENGTH);
-        assert!(try_build(&multibyte, 2).is_ok());
-    }
-
-    #[test]
-    fn test_name_rejects_control_chars() {
-        for (name, index) in [("US\u{7}Dollar", 2), ("a\rb", 1), ("x\u{1b}[2J", 1)] {
-            assert!(
-                matches!(
-                    try_build(name, 2),
-                    Err(CommodityError::NameBadChar { index: at, .. }) if at == index
-                ),
-                "{name:?} should be rejected at index {index}"
-            );
-        }
-    }
-
-    #[test]
-    fn test_name_allows_non_control_unicode() {
-        // Names are display strings: accents, CJK, and symbols must survive.
-        for name in ["US Dollar", "Café 🍰 Voucher", "日本円", "Brent Crude (bbl)", "£ sterling"]
-        {
-            assert_eq!(build(name, 2).name(), name);
-        }
+        assert!(matches!(
+            try_build("US\u{7}Dollar", 2),
+            Err(CommodityError::NameBadChar { character: '\u{7}', index: 2 })
+        ));
     }
 
     #[test]
@@ -356,38 +315,7 @@ mod tests {
         assert_eq!(usd.scale(), 2);
     }
 
-    #[test]
-    fn test_set_name_rejects_invalid() {
-        let mut usd = build("US Dollar", 2);
-        for name in ["", "   ", "\t\n", "US\u{7}Dollar"] {
-            assert!(matches!(
-                usd.set_name(name),
-                Err(CommodityError::NameEmpty | CommodityError::NameBadChar { .. })
-            ));
-        }
-        assert_eq!(usd.name(), "US Dollar");
-    }
-
-    #[test]
-    fn test_set_name_trims() {
-        let mut usd = build("US Dollar", 2);
-        usd.set_name("  United States Dollar \n").unwrap();
-        assert_eq!(usd.name(), "United States Dollar");
-    }
-
     proptest! {
-        /// Validation never panics, and acceptance implies the documented shape.
-        #[test]
-        fn prop_validation_is_total(name: String, scale: u8) {
-            if let Ok(cmo) = try_build(&name, scale) {
-                prop_assert_eq!(cmo.name(), name.trim());
-                prop_assert!(!cmo.name().is_empty());
-                prop_assert!(cmo.name().chars().count() <= Commodity::MAX_NAME_LENGTH);
-                prop_assert!(!cmo.name().chars().any(char::is_control));
-                prop_assert!(cmo.scale() <= Commodity::MAX_SCALE);
-            }
-        }
-
         /// Every scale in range is stored verbatim; every scale out of it is refused.
         #[test]
         fn prop_scale_is_bounded(scale: u8) {

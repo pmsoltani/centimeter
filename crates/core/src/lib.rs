@@ -6,6 +6,7 @@ mod error;
 mod id;
 mod quantity;
 mod rate;
+mod text;
 
 #[cfg(test)]
 mod test_support;
@@ -21,3 +22,4 @@ pub use error::Error;
 pub use id::{Id, IdError, IdPrefix, Identifiable};
 pub use quantity::{Quantity, QuantityError};
 pub use rate::{CommodityPair, Rate, RateError};
+use text::{Text, TextProblem, TextSpec};

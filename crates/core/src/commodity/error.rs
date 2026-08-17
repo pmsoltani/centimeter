@@ -45,12 +45,15 @@ pub enum CommodityError {
         got: usize,
     },
 
-    /// A commodity name has invalid characters.
-    #[error("commodity name has invalid characters, got '{}' at index {index}", got.escape_debug())]
+    /// A commodity name has an invalid character.
+    #[error(
+        "commodity name has an invalid character, got '{}' at index {index}",
+        character.escape_debug()
+    )]
     NameBadChar {
-        /// The commodity name that has invalid characters.
-        got: String,
-        /// The index of the invalid character.
+        /// The rejected character.
+        character: char,
+        /// The byte offset of the invalid character.
         index: usize,
     },
 
