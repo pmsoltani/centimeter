@@ -1,6 +1,6 @@
 ---
 status: ACCEPTED
-date: 2026-08-09
+date: 2026-08-22
 decision-makers: [pmsoltani, Claude]
 ---
 
@@ -21,7 +21,8 @@ value : [Y]   the balancing commodity           (the ledger's functional currenc
 ```
 
 - **Dimensional Invariant:** `amount` is in the posting's specified commodity, `rate` is a conversion unit (`[value.commodity / amount.commodity]`), and `value` is in the ledger's functional commodity (better known as the functional currency, [ADR-0006](0006-one-functional-currency-per-ledger.md)). The engine type-checks this dimensionally.
-- **Numerical Derivation:** Where the engine derives the value, it stores `round(amount * rate)` at that scale. The sub-unit remainder is discarded rather than recorded, because it is physically unrepresentable in the commodity (e.g., there is no such thing as `0.003811 GBP`).
+- **Numerical Derivation:** Where the engine derives the value, it stores `round(amount * rate)` at that scale.
+- **Sub-unit Residue Is Reported:** The signed remainder `amount * rate - value` is returned alongside a derived value it. The remainder sits below the commodity's scale, so it is a bare `Decimal` and not a `Quantity`, see [ADR-0025](0025-rounding-half-up-derivation-only.md).
 - **Storage & Provenance:** The authoritative pair is `(amount, value)`, stored and frozen at entry to prevent drifting. The `rate` is kept only as historical provenance.
 - **No Free Legs:** The engine strictly rejects unbalanced entries with the exact residue reported. If a multi-line transaction produces a rounding residue, the caller must supply an explicit rounding line or allocate the remainder. The core will not auto-repair it via a blank "free leg."
 - **Derivation Modes:** Users supply one or two members of the triple, and the engine derives the rest. (Examples below assume a GBP ledger, where `value` is always GBP).
@@ -47,7 +48,7 @@ value : [Y]   the balancing commodity           (the ledger's functional currenc
 - **Good:** Single-currency, multi-currency, and non-currency quantities all use a single, unified code path.
 - **Good:** Every posting's stored triple either reconciles by construction or is authoritative by construction. No leg's three members silently disagree.
 - **Bad:** A user entering a pinned multi-line foreign-currency total must supply the rounding line themselves, or use an extension/app-layer to automate it. Core rejects without it.
-- **Bad:** Sub-unit rounding stays genuinely unrecorded. An accountant recomputing a single line by hand will find fractions the ledger does not carry.
+- **Bad:** Sub-unit rounding is reported but still unrepresentable. An accountant recomputing a single line by hand will find fractions no account can hold.
 
 ### Confirmation
 

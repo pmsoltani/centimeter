@@ -10,7 +10,7 @@ This directory is centimeter's decision record. Each file captures one architect
 | 0002 | [Rust for the core engine](0002-rust-for-the-core.md)                                                        | ACCEPTED | 2026-08-09 | Invariants in the type system, no performance ceiling, one core embeds everywhere.       |
 | 0003 | [Keep the core small: what stays out](0003-keep-the-core-small.md)                                           | ACCEPTED | 2026-08-09 | Invoicing, tax, reporting and import are layers. The rule for deciding new cases.        |
 | 0004 | [Exact decimal numerics with per-commodity precision](0004-exact-decimal-numerics.md)                        | ACCEPTED | 2026-08-09 | `rust_decimal`, scale on the commodity, never floats, no engine epsilon.                 |
-| 0005 | [Commodity-bearing postings and the triple](0005-commodity-bearing-postings.md)                              | ACCEPTED | 2026-08-09 | Exact dimensionally, to scale numerically; residue goes to an explicit rounding line.    |
+| 0005 | [Commodity-bearing postings and the triple](0005-commodity-bearing-postings.md)                              | ACCEPTED | 2026-08-22 | Exact dimensionally, to scale numerically; residue goes to an explicit rounding line.    |
 | 0006 | [Balance in one functional currency](0006-one-functional-currency-per-ledger.md)                             | ACCEPTED | 2026-08-09 | `∑ value = 0` is one scalar equation, fixed at the ledger level.                         |
 | 0007 | [Enforce balance at one commit boundary](0007-enforce-balance-at-one-commit-boundary.md)                     | ACCEPTED | 2026-08-09 | A staging builder checks before persisting; reject, never auto-repair.                   |
 | 0008 | [The core transaction model](0008-core-transaction-model.md)                                                 | ACCEPTED | 2026-08-09 | One balanced-entry type, signed amounts; dr/cr converted at both edges, never stored.    |
@@ -30,6 +30,7 @@ This directory is centimeter's decision record. Each file captures one architect
 | 0022 | [Errors as values: per-domain enums](0022-errors-as-values-per-domain-enums.md)                              | ACCEPTED | 2026-08-09 | Domain enums plus a thin transparent root; `Result` versus `panic!` layering.            |
 | 0023 | [Testing strategy](0023-testing-strategy.md)                                                                 | ACCEPTED | 2026-08-16 | Inline units, one integration binary per crate, property tests, the gates.               |
 | 0024 | [Commodity identity, and the registry](0024-commodity-identity-and-registry.md)                              | ACCEPTED | 2026-08-11 | Identity is the id; the registry is the only constructor; code and scale are frozen.     |
+| 0025 | [Rounding half-up away from zero, for derivation only](0025-rounding-half-up-derivation-only.md)             | ACCEPTED | 2026-08-22 | Half-up away from zero, from one private constant, and only where core derives.          |
 
 ## Reading order for newcomers
 
@@ -37,7 +38,7 @@ These are not all equally important. The first six steps are the ledger model, a
 
 1. **How the record works**: ADR-0001.
 2. **What the core is and is not**: ADR-0002 (Rust), ADR-0003 (what stays out).
-3. **The numeric foundation**: ADR-0004. Everything downstream depends on it.
+3. **The numeric foundation**: ADR-0004, ADR-0025 (roundings). Everything downstream depends on it.
 4. **The central model decision**: ADR-0005, the commodity-bearing posting, and the `amount * rate = value` triple. Most of the rest follows from this one.
 5. **Balancing**: ADR-0006 (which currency), ADR-0007 (where it is enforced), and ADR-0008 (one entry type, signed amounts).
 6. **Structure and integrity**: ADR-0009 and ADR-0010 (accounts), ADR-0011 (identity), ADR-0024 (commodities), ADR-0012 (lifecycle), ADR-0013 (rates), ADR-0014 (provenance), ADR-0015 (balances are derived), and ADR-0016 (assertions).
