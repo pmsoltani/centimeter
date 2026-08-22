@@ -1,6 +1,6 @@
 //! The crate's composing root error.
 
-use crate::{AccountError, CommodityError, IdError, QuantityError, RateError};
+use crate::{AccountError, CommodityError, IdError, PostingError, QuantityError, RateError};
 
 /// Any error the core can produce.
 #[derive(Debug, thiserror::Error)]
@@ -17,6 +17,10 @@ pub enum Error {
     /// The error is related to record ids.
     #[error(transparent)]
     Id(#[from] IdError),
+
+    /// The error is related to postings.
+    #[error(transparent)]
+    Posting(#[from] PostingError),
 
     /// The error is related to quantities.
     #[error(transparent)]

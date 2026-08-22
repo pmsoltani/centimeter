@@ -12,6 +12,7 @@ Prefixes that exist in code and are now permanent.
 | --------- | ------ |
 | Account   | `acc`  |
 | Commodity | `cmo`  |
+| Posting   | `pst`  |
 
 ## Draft
 
@@ -28,7 +29,6 @@ Proposed, not yet implemented, still changeable.
 | Ledger                | `ldg`  |
 | Party                 | `pty`  |
 | Personal access token | `pat`  |
-| Posting               | `pst`  |
 | Reconciliation mark   | `rec`  |
 | Transaction           | `txn`  |
 | User                  | `usr`  |

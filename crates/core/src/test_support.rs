@@ -3,7 +3,8 @@
 use uuid::Uuid;
 
 use crate::{
-    ChartOfAccounts, CommodityRegistry, Decimal, Id, Identifiable, Quantity, RootSpec, RootsSpec,
+    ChartOfAccounts, Commodity, CommodityRegistry, Decimal, Id, Identifiable, Quantity, Rate,
+    RootSpec, RootsSpec,
 };
 
 /// Mints a distinct [`Id`] from `seed`, reproducibly.
@@ -52,4 +53,25 @@ pub(crate) fn chart() -> ChartOfAccounts {
 pub(crate) fn qty(number: Decimal, code: &str, registry: &CommodityRegistry) -> Quantity {
     let commodity = registry.get_by_code(code).expect("Failed to find commodity");
     Quantity::try_new(number, commodity).expect("Failed to create quantity")
+}
+
+/// Returns `USD` at scale 2 and `JPY` at scale 0 from the given registry.
+///
+/// The pair most tests reach for: one commodity to balance in and one foreign
+/// to it. Two different scales, so a test can tell "the commodity's scale" from
+/// "two decimal places" by accident.
+pub(crate) fn usd_jpy(registry: &CommodityRegistry) -> (&Commodity, &Commodity) {
+    (
+        registry.get_by_code("USD").expect("the fixture registry holds USD"),
+        registry.get_by_code("JPY").expect("the fixture registry holds JPY"),
+    )
+}
+
+/// Returns a conversion rate of `mantissa * 10^-scale`, in `quote` per `base`.
+///
+/// The two commodities must be distinct. An identity is [`Rate::Identity`], and
+/// this would refuse any number but one for a single commodity.
+pub(crate) fn rate(mantissa: i64, scale: u32, quote: &Commodity, base: &Commodity) -> Rate {
+    Rate::try_new(Decimal::new(mantissa, scale), quote.id(), base.id())
+        .expect("the fixture commodities are distinct")
 }

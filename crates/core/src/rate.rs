@@ -24,6 +24,7 @@
 //! and the difference is recognized as finance cost. That is a matter of
 //! postings, not a currency conversion.
 
+mod apply;
 mod error;
 mod pair;
 
