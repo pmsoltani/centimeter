@@ -10,5 +10,6 @@
 mod account;
 mod commodity;
 mod fixtures;
+mod posting;
 mod quantity;
 mod rate;
