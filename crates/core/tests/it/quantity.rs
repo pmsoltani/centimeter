@@ -63,7 +63,7 @@ fn an_over_precise_number_is_refused_while_a_padded_one_is_accepted() {
     assert_eq!(padded.number().scale(), 2);
 
     // 1.555 would have to lose a significant digit, so it is refused outright
-    // rather than rounded to 1.56 (ADR-0004).
+    // rather than rounded to 1.56.
     let err = Quantity::try_new(Decimal::new(1555, 3), dollar).expect_err("1.555 is not 1.56");
     assert!(matches!(err, QuantityError::ScaleTooLarge { scale: 2, .. }), "got {err}");
 }
@@ -83,8 +83,8 @@ fn a_zero_quantity_carries_its_commodity_scale() {
     assert!(!(-no_dollars).number().is_sign_negative());
 }
 
-/// The composing root (ADR-0022) lets a caller mix commodity and quantity
-/// failures in one `Result` without writing a conversion.
+/// A caller can mix commodity and quantity failures in one `Result` without
+/// writing a conversion.
 #[test]
 fn quantity_errors_bubble_into_the_root_error() {
     fn add_across(reg: &CommodityRegistry, a: CommodityId, b: CommodityId) -> Result<(), Error> {

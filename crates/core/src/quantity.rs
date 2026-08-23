@@ -477,7 +477,7 @@ mod tests {
         }
 
         /// A number needing more decimals than its commodity allows is always
-        /// refused, never quietly rounded to fit (ADR-0004).
+        /// refused, never quietly rounded to fit.
         #[test]
         fn prop_try_new_never_rounds(units in 1i64..100_000, last in 1i64..=9) {
             let registry = registry();
@@ -511,7 +511,7 @@ mod tests {
             prop_assert_eq!(padded.number().scale(), plain.number().scale());
         }
 
-        /// Arithmetic preserves scale exactly (ADR-0023).
+        /// Arithmetic preserves scale exactly.
         #[test]
         fn prop_arithmetic_never_changes_scale(a: i64, b: i64) {
             let registry = registry();

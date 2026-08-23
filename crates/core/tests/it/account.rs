@@ -55,8 +55,8 @@ fn roots_may_be_named_anything() {
     assert_eq!(coa.type_of(asset).expect("still an asset root"), AccountType::Asset);
 }
 
-/// The headline claim of ADR-0009, asserted from outside: an account's element
-/// comes from its root, however deep it sits, and no account carries one.
+/// An account's element comes from its root, however deep it sits, and no
+/// account carries one.
 #[test]
 fn an_account_inherits_its_element_from_its_root() {
     let mut coa = chart();
