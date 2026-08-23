@@ -31,6 +31,7 @@ This directory is centimeter's decision record. Each file captures one architect
 | 0023 | [Testing strategy](0023-testing-strategy.md)                                                                 | ACCEPTED | 2026-08-16 | Inline units, one integration binary per crate, property tests, the gates.               |
 | 0024 | [Commodity identity, and the registry](0024-commodity-identity-and-registry.md)                              | ACCEPTED | 2026-08-11 | Identity is the id; the registry is the only constructor; code and scale are frozen.     |
 | 0025 | [Rounding half-up away from zero, for derivation only](0025-rounding-half-up-derivation-only.md)             | ACCEPTED | 2026-08-22 | Half-up away from zero, from one private constant, and only where core derives.          |
+| 0026 | [Dates for periods, instants for provenance](0026-dates-for-periods-instants-for-provenance.md)              | ACCEPTED | 2026-08-23 | Period fixed by a civil date, provenance by a UTC instant.                               |
 
 ## Reading order for newcomers
 
@@ -41,7 +42,7 @@ These are not all equally important. The first six steps are the ledger model, a
 3. **The numeric foundation**: ADR-0004, ADR-0025 (roundings). Everything downstream depends on it.
 4. **The central model decision**: ADR-0005, the commodity-bearing posting, and the `amount * rate = value` triple. Most of the rest follows from this one.
 5. **Balancing**: ADR-0006 (which currency), ADR-0007 (where it is enforced), and ADR-0008 (one entry type, signed amounts).
-6. **Structure and integrity**: ADR-0009 and ADR-0010 (accounts), ADR-0011 (identity), ADR-0024 (commodities), ADR-0012 (lifecycle), ADR-0013 (rates), ADR-0014 (provenance), ADR-0015 (balances are derived), and ADR-0016 (assertions).
+6. **Structure and integrity**: ADR-0009 and ADR-0010 (accounts), ADR-0011 (identity), ADR-0024 (commodities), ADR-0012 (lifecycle), ADR-0013 (rates), ADR-0014 (provenance) with ADR-0026 (dates and timestamps), ADR-0015 (balances are derived), and ADR-0016 (assertions).
 7. **Extensibility**: ADR-0017 (the attachment model), and ADR-0018 (parties, the first extension, and the proof that the model works).
 8. **Engineering convention**: ADR-0019 (storage), ADR-0020 (workspace), ADR-0021 (licensing), ADR-0022 (errors), ADR-0023 (testing).
 
