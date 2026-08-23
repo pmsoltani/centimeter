@@ -32,6 +32,6 @@ Balance in **one functional currency**, fixed at the **ledger/entity level**.
 - **Good:** The balancing invariant reduces to a single scalar equation (`∑ value = 0`), which is extremely cheap to enforce anywhere, including SQL ([ADR-0019](0019-storage-layer-constraints-and-sqlite.md)). Valuation cannot drift between entries.
 - **Bad:** Forces a primary currency choice on personal-finance users who might prefer genuinely independent dual-currency ledgers.
 
-### Confirmation
+## Confirmation
 
 The `Ledger` type holds exactly one functional currency. The posting builder statically rejects any posting where `value.commodity` diverges from it.

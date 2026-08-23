@@ -29,6 +29,6 @@ To ensure the core truly depends on nothing ([ADR-0003](0003-keep-the-core-small
 - **Good:** Developer loops stay clean of nightly and FFI build requirements.
 - **Bad:** Adding a new crate requires a strict checklist to avoid silently dropping lint inheritances or messing up lockstep versioning.
 
-### Confirmation
+## Confirmation
 
 `cargo tree -p centimeter-core` shows no internal dependency, so the boundary is checked on every build rather than by review. Every member crate's manifest contains `[lints] workspace = true`.

@@ -27,6 +27,6 @@ To keep the core small and closed ([ADR-0003](0003-keep-the-core-small.md)), the
 - **Good:** Lazy resolution means that core balancing never triggers an extension's SQL join.
 - **Bad:** Attached data requires a join rather than a direct field read. If read performance becomes an issue, extensions must build their own denormalized read models.
 
-### Confirmation
+## Confirmation
 
 `crates/core/Cargo.toml` lists no internal dependencies, so no core record can name an extension type.

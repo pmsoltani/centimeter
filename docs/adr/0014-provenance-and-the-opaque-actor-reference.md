@@ -26,6 +26,6 @@ An audit trail is only valuable if authorship cannot be dropped, altered, or sep
 - **Good:** The injected clock allows the entire engine to be deterministically replayed for testing.
 - **Bad:** Core cannot cryptographically verify that the `created_by` prefix is registered or that the target user actually exists.
 
-### Confirmation
+## Confirmation
 
 `centimeter-core` contains no `User` type and no dependencies resolving one. A test builds the same transaction twice with a fixed clock and ID generator and asserts byte-identical hashes; another deletes the actor's row in the extension and asserts the chain still verifies.

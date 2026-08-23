@@ -26,6 +26,6 @@ An accounting engine rejects inputs constantly (e.g., unbalanced transactions, m
 - **Good:** `#[error(transparent)]` ensures the composed error reads exactly like the underlying domain error in logs.
 - **Bad:** `#[non_exhaustive]` forces callers to use wildcard arms, removing compiler exhaustiveness checks on their end.
 
-### Confirmation
+## Confirmation
 
 Every error enum is tagged with `#[non_exhaustive]`, and the root enum's variants all have `#[error(transparent)]` and `#[from]`, so it declares no message text of its own. `cargo clippy` is configured to require a `# Panics` section on any public function that can panic ([ADR-0023](0023-testing-strategy.md)).

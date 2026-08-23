@@ -26,6 +26,6 @@ We will use **exact scaled decimals** via the `rust_decimal` crate, treating pre
 - **Good:** The compiler outright rejects float arithmetic, ensuring the rule never decays into mere discipline.
 - **Bad:** `rust_decimal` limits us to a 96-bit mantissa (about 28 digits), meaning extreme-magnitude mixed-scale additions could theoretically drop precision.
 
-### Confirmation
+## Confirmation
 
 `cargo clippy` fails on any float arithmetic. Property tests verify that quantity arithmetic rigorously preserves per-commodity scale and catches overflows safely.

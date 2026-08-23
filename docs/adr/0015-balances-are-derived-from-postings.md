@@ -26,6 +26,6 @@ We must decide if an account's balance is stored or derived state. Pure derivati
 - **Good:** The deferred checkpoint cache requires zero model changes to implement later. The persona that needs mutability (personal) is small enough for pure derivation, while the persona that needs performance (corporate) naturally uses the lock dates required for caching.
 - **Bad:** A large corporate ledger will experience slow reports until the checkpoint cache is implemented. A ledger completely refusing to use lock dates will never get the cache speedup.
 
-### Confirmation
+## Confirmation
 
 `Account` has no `balance` field and no accessor for one. Rebuild-from-zero is a tested operation: a test drops every checkpoint, recomputes from the first posting, and asserts the results match the cached ones exactly.

@@ -50,6 +50,6 @@ value : [Y]   the balancing commodity           (the ledger's functional currenc
 - **Bad:** A user entering a pinned multi-line foreign-currency total must supply the rounding line themselves, or use an extension/app-layer to automate it. Core rejects without it.
 - **Bad:** Sub-unit rounding is reported but still unrepresentable. An accountant recomputing a single line by hand will find fractions no account can hold.
 
-### Confirmation
+## Confirmation
 
 Dimensional checks are enforced at the posting constructor. Property tests assert that the stored `value` equals `round(amount * rate)` at scale, that no accepted transaction has a non-zero `value` sum, and that unbalanced sets reject with the exact residue. No posting type has an optional `value` field.

@@ -34,6 +34,6 @@ We will use markdown files to record architectural decisions, inspired by the [M
 - **Good:** The "why" behind a decision outlives the decision itself.
 - **Bad:** The process of creating and maintaining ADRs can be time-consuming and may slow down the development process.
 
-### Confirmation
+## Confirmation
 
 A decision is officially recorded when its ADR file exists and is listed in [`README.md`](README.md)'s index. The index is complete when every `NNNN-*.md` file in this directory has a row and every row points at a file that exists.

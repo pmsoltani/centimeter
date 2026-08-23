@@ -24,6 +24,6 @@ Rust's sum types, exhaustive matching, and ownership model map perfectly onto ac
 - **Good:** Reaches all binding targets without needing parallel implementations.
 - **Bad:** Slower initial development speed and steeper learning curve compared to scripting languages.
 
-### Confirmation
+## Confirmation
 
 The core crate's manifest lists no I/O, async, or storage dependencies. `centimeter-core` compiles for `wasm32-unknown-unknown` without ambient-entropy configuration.

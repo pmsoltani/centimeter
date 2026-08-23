@@ -38,6 +38,6 @@ Explicitly outside the core:
 - **Good:** The core remains small enough to be exhaustively fuzzed and property-tested, while still supporting a mathematically rigorous audit trail.
 - **Bad:** Consumers will need facade crates and composition roots to build a fully usable app ([ADR-0020](0020-cargo-workspace-structure.md)).
 
-### Confirmation
+## Confirmation
 
 `crates/core/Cargo.toml` lists no internal dependencies and no I/O crates.

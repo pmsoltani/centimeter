@@ -28,6 +28,6 @@ The core uses **one balanced-entry type** with **signed amounts**.
 - **Bad:** Document-specific fields have nowhere to live in core and must utilize the extension model ([ADR-0017](0017-extension-attachment-model.md)).
 - **Bad:** Raw database rows lack explicit dr/cr columns, which accountants expect (mitigated by reporting views).
 
-### Confirmation
+## Confirmation
 
 The core exposes no `Invoice` or `Bill` type. No posting field is named `debit` or `credit`. A reporting-layer function converts signed postings to dr/cr pairs, and round-trip property tests ensure they map identically.

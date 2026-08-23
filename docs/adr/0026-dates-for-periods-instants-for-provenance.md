@@ -29,6 +29,6 @@ Every ledger entry must track its economic date (when the event occurred) and it
 - **Bad:** Consumers already holding `chrono`, `jiff`, or `time` types must manually convert them to primitive integers at the core boundary.
 - **Neutral:** The core takes on the burden of calendar conversion correctness, mitigating it via exhaustive testing.
 
-### Confirmation
+## Confirmation
 
 The vendored calendar conversion logic is exhaustively testable: a unit test round-trips every single day from year 1 to 9999 (3.65 million iterations) in a single loop. `Date` implements `Ord`, ensuring period comparisons are evaluated as a single, unambiguous integer comparison.

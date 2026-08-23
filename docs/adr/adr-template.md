@@ -22,7 +22,7 @@ decision-makers: [pmsoltani, Claude]
 - **Bad:** {A real cost, accepted knowingly. If nothing goes here, look harder.}
 - **Neutral:** {A consequence that is neither, but which a reader would otherwise wonder about.}
 
-### Confirmation
+## Confirmation
 
 {How someone checks that the code actually complies. e.g., A specific compile-time property, a `cargo` command, or an exact test assertion. Not "review carefully".}
 

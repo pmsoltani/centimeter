@@ -24,6 +24,6 @@ decision-makers: [pmsoltani]
 - **Good:** Both patent-grant and GPLv2-compatible audiences are served.
 - **Bad:** A competitor could build a proprietary product on this work without contributing back. This is an accepted cost of maximizing adoption.
 
-### Confirmation
+## Confirmation
 
 Both `LICENSE-MIT` and `LICENSE-APACHE` exist at the repository root, and no member crate overrides `license` in its own `[package]` table. A published crate's metadata reads `MIT OR Apache-2.0`.

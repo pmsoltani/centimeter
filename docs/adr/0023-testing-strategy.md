@@ -38,6 +38,6 @@ Because the entire value proposition of `centimeter` is that the books are mathe
 - **Bad:** Inline unit tests inflate source file length, adding a visual readability cost.
 - **Bad:** The wasm gate binds every commit to a target the project does not otherwise build for. A dependency that breaks it has to be replaced rather than tolerated.
 
-### Confirmation
+## Confirmation
 
 Each crate's `tests/` directory contains exactly one top-level file, `it/main.rs`. CI runs all gate commands on every commit.

@@ -31,6 +31,6 @@ Accounts need structure. Systems differ on whether accounts should be strictly t
 - **Bad:** Deriving an account's type requires a tree walk to the root, though this is cheap at standard chart sizes.
 - **Bad:** A chart cannot be reorganized across elements at all, so a misfiled account costs a replacement and a reversal rather than a drag in a UI.
 
-### Confirmation
+## Confirmation
 
 `Account` has no field naming an element, and `RootAccounts` holds exactly five IDs, one per element, so a sixth root cannot be constructed. A test asserts that an account's element is resolved by walking to its root; another ensures that a reparent whose destination belongs to a different root is refused.

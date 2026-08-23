@@ -24,6 +24,6 @@ Enforce balance at **one commit boundary through a staging posting builder**, an
 - **Good:** A typed error naming the residue is instantly actionable, unlike an auto-generated entry in an `Imbalance-USD` account that must be hunted down later.
 - **Bad:** Import pipelines cannot force a "nearly right" transaction into the posted state; they must produce drafts.
 
-### Confirmation
+## Confirmation
 
 Property tests assert any accepted posting set commits with exact zero, and rejections yield the precise residue. The SQLite suite verifies the database rejects exactly what the builder rejects.

@@ -28,6 +28,6 @@ Because `rate` bridges the `amount` and `value` in a posting ([ADR-0005](0005-co
 - **Good:** Historical rates cannot be retroactively broken because the effective rate is sealed on the posting.
 - **Bad:** Users must learn the difference between the `Rate` and `Quantity` types.
 
-### Confirmation
+## Confirmation
 
 `Rate` exposes no `Add`, `Sub`, or `Neg` traits. Zero and negative rates are explicitly tested and accepted.

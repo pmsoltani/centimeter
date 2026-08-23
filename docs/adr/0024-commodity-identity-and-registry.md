@@ -32,6 +32,6 @@ Furthermore, there is another design gap: nothing prevented a ledger from holdin
 - **Bad:** Correcting a mistyped code or scale requires registering a replacement and posting reversal transactions for anything written under the original.
 - **Bad:** Anything rendering a commodity (including error messages) now needs the registry in hand to resolve the `CommodityId` string into a human-readable code.
 
-### Confirmation
+## Confirmation
 
 `Commodity::try_new` is private, making `CommodityRegistry::add` the only producer. A compile-fail test asserts the constructor is unreachable from outside the crate. Unit tests assert that two commodities sharing code, name, and scale but differing in ID compare unequal, and the registry exposes no `&mut self` methods other than `add` and a name correction.

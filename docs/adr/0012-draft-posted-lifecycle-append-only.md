@@ -27,6 +27,6 @@ An audit trail requires that history not be rewritten. However, treating a ledge
 - **Good:** The system scales seamlessly. Personal users leave hashes/locks off for a lightweight experience; corporate users turn them on for statutory compliance.
 - **Bad:** A netted view ("what the books say now") and a full view ("everything ever posted") diverge, requiring reports to be explicit about which they display.
 
-### Confirmation
+## Confirmation
 
 The storage layer forbids `UPDATE` and `DELETE` on a posted transaction outright ([ADR-0019](0019-storage-layer-constraints-and-sqlite.md)), so append-only holds even against a handwritten `sqlite3` statement. A test mutates a field covered by the hash and asserts the chain breaks.

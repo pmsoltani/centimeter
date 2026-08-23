@@ -27,6 +27,6 @@ Every core record needs a stable identifier. Identity is the critical seam for t
 - **Good:** Compile-time prevention of record type confusion.
 - **Bad:** `TEXT` keys are wider (~30 bytes vs. 16 bytes), replicating across all foreign keys and indexes. This is an accepted tradeoff for observability.
 
-### Confirmation
+## Confirmation
 
 Round-trip property tests assert `parse(render(id)) == id` for every registered prefix and that a TypeID string with the wrong prefix fails to parse into `Id<T>`. A compile-fail test proves `AccountId` cannot be passed where `PostingId` is expected. `centimeter-core` builds for `wasm32-unknown-unknown`, which is only possible because no ID is generated from ambient entropy.

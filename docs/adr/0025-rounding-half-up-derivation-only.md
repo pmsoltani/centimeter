@@ -27,6 +27,6 @@ decision-makers: [pmsoltani, Claude]
 - **Bad:** Half-up rounding carries a known, systematic upward bias across large datasets, accepted knowingly: any accumulated drift lands on an explicit rounding line [ADR-0005](0005-commodity-bearing-postings.md) where it is visible as a balance, rather than hidden in the math.
 - **Neutral:** Institutions requiring half-even for specific regulatory filings must implement that rounding in their reporting layer.
 
-### Confirmation
+## Confirmation
 
 Property tests assert `round(-x) == -round(x)` over arbitrary values and scales, and `value + discarded == amount * rate` exactly. A pinning test proves the strategy is applied correctly and ignores the crate default (e.g., `round_dp_with_strategy(0.005, 2) == 0.01`, not `0.00`). The constant is private to the module that rounds, so that the only public route to rounding is the posting constructor.

@@ -30,6 +30,6 @@ Both balance assertions and reconciliation marks help users localize discrepanci
 - **Good:** Relegating reconciliation to an extension preserves the integrity hash chain (which only covers economic fields).
 - **Bad:** Users who want standard reconciliation must explicitly add an extension crate.
 
-### Confirmation
+## Confirmation
 
 `centimeter-core` contains `assertions.rs` but no mutable status field on a posted posting.

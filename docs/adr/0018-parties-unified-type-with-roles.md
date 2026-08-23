@@ -25,6 +25,6 @@ Accounting systems must track counterparties (customers, vendors, employees). We
 - **Good:** Snapshotting preserves strict historical and statutory accuracy for reissued invoices.
 - **Bad:** Because roles are data, role-specific required fields (e.g., requiring a tax ID for vendors but not employees) must be validated in application logic rather than the compiler's type system.
 
-### Confirmation
+## Confirmation
 
 `centimeter-core` contains no type named `Party` and no field referencing one. A test updates a party's registered address and asserts a previously issued document still renders the old one.

@@ -24,6 +24,6 @@ The account tree in [ADR-0009](0009-typed-account-tree-five-roots.md) types an a
 - **Bad:** Application UIs, trial balances, and reports must be strictly designed to handle and display an account's balance as a list of multiple commodities, rather than a single scalar value.
 - **Bad:** The posting builder's entailment logic must rely entirely on the posting input rather than structural account definitions.
 
-### Confirmation
+## Confirmation
 
 `Account` has no `commodity` field and no method returning one. A test posts two different commodities to the same account and asserts the account query returns two balances rather than an error.
